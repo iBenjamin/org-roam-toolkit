@@ -72,17 +72,17 @@ clean-rust:
 	cargo clean --manifest-path mcp-servers/org-roam/Cargo.toml
 
 elisp-test:
-	@if [ -f packages/emacs/Eldev ]; then \
+	@if [ -f packages/emacs/Eldev ] && command -v eldev >/dev/null 2>&1; then \
 		cd packages/emacs && eldev -C --unstable test; \
 	else \
-		echo "skip: packages/emacs/Eldev not present yet"; \
+		echo "skip: eldev is not installed or packages/emacs/Eldev is not present"; \
 	fi
 
 elisp-lint:
-	@if [ -f packages/emacs/Eldev ]; then \
+	@if [ -f packages/emacs/Eldev ] && command -v eldev >/dev/null 2>&1; then \
 		cd packages/emacs && eldev -C --unstable lint; \
 	else \
-		echo "skip: packages/emacs/Eldev not present yet"; \
+		echo "skip: eldev is not installed or packages/emacs/Eldev is not present"; \
 	fi
 
 # ---- agent plugin install helpers -------------------------------------------
