@@ -6,6 +6,10 @@ node_modules/
 *.tsbuildinfo
 dist/
 
+# Rust
+target/
+Cargo.lock.bak
+
 # Editor
 *~
 *.swp

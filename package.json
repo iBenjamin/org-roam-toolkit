@@ -23,8 +23,9 @@
     "zettelkasten"
   ],
   "workspaces": [
-    "packages/*",
-    "mcp-servers/*"
+    "packages/emacs",
+    "packages/web",
+    "mcp-servers/org-roam"
   ],
   "scripts": {
     "build": "tsc -b",

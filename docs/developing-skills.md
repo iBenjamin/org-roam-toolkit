@@ -7,7 +7,7 @@ org-roam-toolkit/
 ├── packages/
 │   ├── emacs/                        # @org-roam-toolkit/emacs — bin/emacs-eval (→ ortk-emacs-eval), lib/, elisp/, src/
 │   ├── web/                          # @org-roam-toolkit/web   — dist/{fetch,ocr}-cli.js (→ ortk-fetch / ortk-ocr), src/sites/
-│   └── dashboard-server/             # @org-roam-toolkit/dashboard-server
+│   └── dashboard-server/             # ortk-dashboard — Rust crate (axum + HTMX)
 ├── mcp-servers/
 │   └── org-roam/                     # @org-roam-toolkit/mcp-org-roam
 └── plugins/
@@ -24,11 +24,12 @@ org-roam-toolkit/
 ## Daily commands
 
 ```bash
-make install       # npm install (workspaces)
-make build         # tsc -b (all TS packages)
-make test          # vitest + (eldev test if Eldev present)
-make lint          # vitest lint hooks + eldev lint
-make clean         # tsc -b --clean
+make install       # npm install (TS workspaces)
+make build         # tsc -b + cargo build --release
+make dashboard     # run the Rust dashboard binary on http://127.0.0.1:9876
+make test          # vitest + cargo test + (eldev test if Eldev present)
+make lint          # npm lint hooks + cargo clippy + eldev lint
+make clean         # tsc -b --clean + cargo clean
 ```
 
 ## Adding a new elisp package

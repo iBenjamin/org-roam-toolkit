@@ -56,10 +56,16 @@ Register in `packages/web/src/sites/index.ts`. Order matters: the first `match()
 
 ## TypeScript
 
-- All packages use `tsconfig.base.json` and project references.
+- TypeScript packages (`packages/emacs`, `packages/web`, `mcp-servers/org-roam`) use `tsconfig.base.json` and project references.
 - ES module output, NodeNext resolution.
 - Source in `src/`, output in `dist/` (gitignored).
 - DOM types are only enabled in `packages/web` (it runs page.evaluate callbacks). Other packages stay node-only.
+
+## Rust
+
+- `packages/dashboard-server/` is a Rust crate (`ortk-dashboard`, axum + HTMX). It is intentionally *not* an npm workspace — Cargo manages its own deps.
+- Single static binary; targets only the host platform (macOS arm64 / x86_64). Cross-compilation is out of scope.
+- Probes shell out to `ortk-emacs-eval` and `ortk-mcp` on PATH — protocol parity with the rest of the stack, no shared library.
 
 ## What does NOT belong in this repo
 

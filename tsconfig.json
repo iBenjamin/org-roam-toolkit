@@ -4,7 +4,6 @@
   "references": [
     { "path": "./packages/emacs" },
     { "path": "./packages/web" },
-    { "path": "./packages/dashboard-server" },
     { "path": "./mcp-servers/org-roam" }
   ]
 }

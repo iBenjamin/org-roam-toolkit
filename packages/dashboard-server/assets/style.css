@@ -1,0 +1,123 @@
+/* org-roam-toolkit dashboard — minimal dark theme */
+
+:root {
+    --bg: #11141a;
+    --bg-card: #1a1f2a;
+    --bg-card-up: #1a1f2a;
+    --bg-card-down: #2a1313;
+    --fg: #e6e8ec;
+    --fg-dim: #8c93a3;
+    --fg-error: #ff7a7a;
+    --accent: #6cb4ff;
+    --border: #262b35;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    padding: 1.5rem 2rem 3rem;
+    background: var(--bg);
+    color: var(--fg);
+    font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+}
+
+header {
+    margin-bottom: 1.5rem;
+}
+
+header h1 {
+    margin: 0;
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: var(--accent);
+}
+
+.subtitle {
+    margin: 0.2rem 0 0;
+    font-size: 0.85rem;
+    color: var(--fg-dim);
+}
+
+main {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 1rem;
+    max-width: 1200px;
+}
+
+.card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--border);
+    border-radius: 6px;
+    padding: 1rem 1.25rem;
+    transition: border-color 120ms ease;
+}
+
+.card-up {
+    border-left-color: #4caf50;
+}
+
+.card-down {
+    background: var(--bg-card-down);
+    border-left-color: #ff5252;
+}
+
+.card-loading {
+    opacity: 0.6;
+}
+
+.card h2 {
+    margin: 0 0 0.75rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: var(--fg-dim);
+}
+
+dl {
+    margin: 0;
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 0.35rem 1rem;
+}
+
+dt {
+    color: var(--fg-dim);
+    font-size: 0.85rem;
+}
+
+dd {
+    margin: 0;
+    color: var(--fg);
+}
+
+dd.mono, .mono {
+    font-family: var(--mono);
+    font-size: 0.85rem;
+    word-break: break-all;
+}
+
+.placeholder {
+    margin: 0;
+    color: var(--fg-dim);
+    font-style: italic;
+}
+
+.error {
+    margin: 0;
+    color: var(--fg-error);
+    font-family: var(--mono);
+    font-size: 0.85rem;
+    white-space: pre-wrap;
+}
+
+.timestamp {
+    margin: 0.75rem 0 0;
+    color: var(--fg-dim);
+    font-size: 0.75rem;
+    text-align: right;
+}

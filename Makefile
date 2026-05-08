@@ -1,19 +1,20 @@
-.PHONY: install build test lint clean elisp-test elisp-lint \
-        dashboard dashboard-build install-claude uninstall-claude help
+.PHONY: install build build-rust test test-rust lint lint-rust clean clean-rust \
+        dashboard dashboard-build elisp-test elisp-lint \
+        install-claude uninstall-claude help
 
 REPO_ROOT      := $(shell pwd)
 DASH_PORT      ?= 9876
-DASH_SCRIPT    := $(REPO_ROOT)/packages/dashboard-server/dist/server.js
+DASH_BIN       := $(REPO_ROOT)/packages/dashboard-server/target/release/ortk-dashboard
 
 help:
 	@echo "Targets (development inside this monorepo — end users install via brew):"
-	@echo "  install            npm install (workspaces)"
-	@echo "  build              tsc -b (all TS packages, no UI)"
-	@echo "  dashboard-build    build TS + Svelte UI bundle"
-	@echo "  dashboard          build all + run server in foreground (Ctrl-C to stop)"
-	@echo "  test               run all tests (TS + elisp)"
-	@echo "  lint               run all linters"
-	@echo "  clean              tsc -b --clean"
+	@echo "  install            npm install (TS workspaces)"
+	@echo "  build              tsc -b + cargo build --release (everything)"
+	@echo "  dashboard-build    alias of build (kept for muscle memory)"
+	@echo "  dashboard          run the Rust dashboard binary in foreground"
+	@echo "  test               npm test + cargo test + (eldev test if Eldev present)"
+	@echo "  lint               npm run lint + cargo clippy + eldev lint"
+	@echo "  clean              tsc -b --clean + cargo clean"
 	@echo "  install-claude     symlink the plugin into ~/.claude/plugins/ (dev mode)"
 	@echo "  uninstall-claude   remove the plugin symlink"
 	@echo "  elisp-test/-lint   eldev test/lint in packages/emacs"
@@ -25,28 +26,39 @@ help:
 install:
 	npm install
 
-build:
+build: build-rust
 	npm run build
 
-dashboard-build: build
-	npm -w @org-roam-toolkit/dashboard-server run build:ui
+build-rust:
+	cd packages/dashboard-server && cargo build --release
 
-dashboard: dashboard-build
+dashboard-build: build
+
+dashboard: build-rust
 	@echo "Starting dashboard on http://127.0.0.1:$(DASH_PORT) (Ctrl-C to stop)"
-	@node $(DASH_SCRIPT) --port=$(DASH_PORT)
+	@$(DASH_BIN) --port=$(DASH_PORT)
 
 test: build
 	npm test
+	@$(MAKE) test-rust
 	@$(MAKE) elisp-test
+
+test-rust:
+	cd packages/dashboard-server && cargo test
 
 lint:
 	npm run lint
+	@$(MAKE) lint-rust
 	@$(MAKE) elisp-lint
 
-clean:
+lint-rust:
+	cd packages/dashboard-server && cargo clippy --all-targets -- -D warnings
+
+clean: clean-rust
 	npm run clean
-	@rm -f packages/dashboard-server/ui/dist/index.html 2>/dev/null || true
-	@rm -rf packages/dashboard-server/ui/dist/assets 2>/dev/null || true
+
+clean-rust:
+	cd packages/dashboard-server && cargo clean
 
 elisp-test:
 	@if [ -f packages/emacs/Eldev ]; then \
@@ -86,11 +98,11 @@ install-claude:
 	@echo ""
 	@echo "Note: the plugin's .mcp.json and skill scripts call ortk-* bins on PATH."
 	@echo "Either install the brew formula, or symlink the dev bins yourself, e.g.:"
-	@echo "  ln -snf $(REPO_ROOT)/packages/emacs/bin/emacs-eval                 /usr/local/bin/ortk-emacs-eval"
-	@echo "  ln -snf $(REPO_ROOT)/packages/dashboard-server/bin/dashboard-serve /usr/local/bin/ortk-dashboard"
-	@echo "  ln -snf $(REPO_ROOT)/mcp-servers/org-roam/dist/index.js            /usr/local/bin/ortk-mcp"
-	@echo "  ln -snf $(REPO_ROOT)/packages/web/dist/fetch-cli.js                /usr/local/bin/ortk-fetch"
-	@echo "  ln -snf $(REPO_ROOT)/packages/web/dist/ocr-cli.js                  /usr/local/bin/ortk-ocr"
+	@echo "  ln -snf $(REPO_ROOT)/packages/emacs/bin/emacs-eval                       /usr/local/bin/ortk-emacs-eval"
+	@echo "  ln -snf $(REPO_ROOT)/packages/dashboard-server/target/release/ortk-dashboard /usr/local/bin/ortk-dashboard"
+	@echo "  ln -snf $(REPO_ROOT)/mcp-servers/org-roam/dist/index.js                  /usr/local/bin/ortk-mcp"
+	@echo "  ln -snf $(REPO_ROOT)/packages/web/dist/fetch-cli.js                      /usr/local/bin/ortk-fetch"
+	@echo "  ln -snf $(REPO_ROOT)/packages/web/dist/ocr-cli.js                        /usr/local/bin/ortk-ocr"
 
 uninstall-claude:
 	@target="$(CLAUDE_PLUGINS_DIR)/$(PLUGIN_NAME)"; \

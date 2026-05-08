@@ -52,7 +52,7 @@ org-roam-toolkit/
 ├── packages/
 │   ├── emacs/                      # @org-roam-toolkit/emacs        — emacsclient wrapper + shared elisp
 │   ├── web/                        # @org-roam-toolkit/web          — playwright fetchers + OCR
-│   └── dashboard-server/           # @org-roam-toolkit/dashboard-server — observability HTTP server + Svelte UI
+│   └── dashboard-server/           # ortk-dashboard — Rust crate (axum + HTMX, single static binary)
 │
 ├── mcp-servers/
 │   └── org-roam/                   # @org-roam-toolkit/mcp-org-roam — MCP server backed by emacsclient

@@ -23,42 +23,37 @@ class OrgRoamToolkit < Formula
   head "https://github.com/iwangkaimin/org-roam-toolkit.git", branch: "main"
 
   depends_on "node"
+  depends_on "rust" => :build
   # Emacs is a runtime dependency for the daemon-side functionality.
   # Users without Emacs can still install the bins; they just won't work.
   depends_on "emacs" => :recommended
 
   def install
-    # Install Node deps for all workspaces (including dev deps — needed for
-    # tsc + vite during build). Use --no-audit/--no-fund to keep brew output
-    # clean.
+    # --- Node side: emacs / web / mcp-org-roam packages ---------------
+    # Install Node deps for all workspaces and compile the TypeScript.
     system "npm", "install", "--no-audit", "--no-fund", "--ignore-scripts"
-
-    # Compile every workspace's TypeScript.
     system "npm", "run", "build"
-
-    # Build the Svelte UI bundle (depends on dashboard-server build).
-    system "npm", "-w", "@org-roam-toolkit/dashboard-server", "run", "build:ui"
-
-    # Drop dev-only deps now that build is done. (Best-effort — npm prune
-    # may keep some entries due to workspace edges; the resulting tree is
-    # still functional.)
+    # Drop dev-only deps. Best-effort — npm prune may keep some entries
+    # due to workspace edges; the resulting tree is still functional.
     system "npm", "prune", "--omit=dev"
 
-    # Stash the entire repo (sources + node_modules + dist) under libexec.
-    # We need the layout intact at runtime because:
-    #   - bin/emacs-eval is bash and resolves elisp/ via $BASH_SOURCE
-    #   - mcp-org-roam imports @org-roam-toolkit/emacs from node_modules
-    #   - dashboard-server reads ui/dist/ for static asset serving
+    # --- Rust side: ortk-dashboard --------------------------------------
+    cd "packages/dashboard-server" do
+      system "cargo", "build", "--release", "--locked"
+    end
+
+    # --- Stage everything under libexec --------------------------------
+    # The bash bin (emacs-eval) resolves elisp/ via $BASH_SOURCE → libexec.
+    # The Node bins (mcp-org-roam, fetch, ocr) resolve @org-roam-toolkit/emacs
+    # via libexec/node_modules. The Rust bin is self-contained.
     libexec.install Dir["*"]
 
-    # Expose ortk-* bins on PATH. emacs-eval and dashboard-serve are bash
-    # wrappers that resolve symlinks themselves; ortk-mcp / ortk-fetch /
-    # ortk-ocr are Node entry points (Node handles symlink resolution).
+    # --- Expose ortk-* bins on PATH ------------------------------------
     bin.install_symlink libexec/"packages/emacs/bin/emacs-eval" => "ortk-emacs-eval"
-    bin.install_symlink libexec/"packages/dashboard-server/bin/dashboard-serve" => "ortk-dashboard"
     bin.install_symlink libexec/"mcp-servers/org-roam/dist/index.js" => "ortk-mcp"
     bin.install_symlink libexec/"packages/web/dist/fetch-cli.js" => "ortk-fetch"
     bin.install_symlink libexec/"packages/web/dist/ocr-cli.js" => "ortk-ocr"
+    bin.install_symlink libexec/"packages/dashboard-server/target/release/ortk-dashboard" => "ortk-dashboard"
   end
 
   service do
@@ -93,10 +88,9 @@ class OrgRoamToolkit < Formula
   end
 
   test do
-    # Smoke-tests: the bins should at least start without crashing.
-    assert_match "ortk", shell_output("#{bin}/ortk-emacs-eval --help 2>&1", 0..1)
-    # MCP server prints its protocol handshake on stdin/stdout; just check it
-    # responds to --version-style probe via Node.
-    system "node", "--version"
+    # ortk-dashboard responds to --version (built from cargo, has version baked in)
+    assert_match version.to_s, shell_output("#{bin}/ortk-dashboard --version")
+    # ortk-emacs-eval --help works without a daemon
+    assert_match "emacs-eval", shell_output("#{bin}/ortk-emacs-eval --help 2>&1", 0..1)
   end
 end
