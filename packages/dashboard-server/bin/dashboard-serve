@@ -1,0 +1,16 @@
+#!/bin/bash
+# dashboard-serve — start the org-roam-toolkit observability HTTP server.
+# Resolve the script's real path through any number of symlinks so the bin
+# works after `brew install_symlink` puts it on PATH.
+set -euo pipefail
+SOURCE="${BASH_SOURCE[0]}"
+while [ -L "$SOURCE" ]; do
+    LINK_DIR="$(cd "$(dirname "$SOURCE")" && pwd -P)"
+    TARGET="$(readlink "$SOURCE")"
+    case "$TARGET" in
+        /*) SOURCE="$TARGET" ;;
+        *)  SOURCE="$LINK_DIR/$TARGET" ;;
+    esac
+done
+SCRIPT_DIR="$(cd "$(dirname "$SOURCE")" && pwd -P)"
+exec node "$SCRIPT_DIR/../dist/server.js" "$@"
