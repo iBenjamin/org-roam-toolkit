@@ -24,9 +24,6 @@ class OrgRoamToolkit < Formula
 
   depends_on "node"
   depends_on "rust" => :build
-  # Emacs is a runtime dependency for the daemon-side functionality.
-  # Users without Emacs can still install the bins; they just won't work.
-  depends_on "emacs" => :recommended
 
   def install
     # --- Node side: emacs / web packages -------------------------------
