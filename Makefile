@@ -20,7 +20,7 @@ help:
 	@echo "  elisp-test/-lint   eldev test/lint in packages/emacs"
 	@echo ""
 	@echo "End-user install (after publishing):"
-	@echo "  brew tap iwangkaimin/tap && brew install org-roam-toolkit"
+	@echo "  brew tap iBenjamin/tap && brew install org-roam-toolkit"
 	@echo "  brew services start org-roam-toolkit       # autostart dashboard"
 
 install:

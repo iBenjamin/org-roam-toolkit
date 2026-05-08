@@ -5,13 +5,13 @@
   "description": "MCP server, observability dashboard, and Claude Code plugin for an Emacs/org-roam knowledge base. Distributed as a Homebrew tap.",
   "license": "MIT",
   "author": "Benjamin Wong <iwangkaimin@gmail.com>",
-  "homepage": "https://github.com/iwangkaimin/org-roam-toolkit#readme",
+  "homepage": "https://github.com/iBenjamin/org-roam-toolkit#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/iwangkaimin/org-roam-toolkit.git"
+    "url": "git+https://github.com/iBenjamin/org-roam-toolkit.git"
   },
   "bugs": {
-    "url": "https://github.com/iwangkaimin/org-roam-toolkit/issues"
+    "url": "https://github.com/iBenjamin/org-roam-toolkit/issues"
   },
   "keywords": [
     "org-roam",

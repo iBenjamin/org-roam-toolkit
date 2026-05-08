@@ -5,8 +5,8 @@ edition = "2021"
 license = "MIT"
 description = "Local observability dashboard for the org-roam-toolkit (axum + HTMX, single static binary)"
 authors = ["Benjamin Wong <iwangkaimin@gmail.com>"]
-repository = "https://github.com/iwangkaimin/org-roam-toolkit"
-homepage = "https://github.com/iwangkaimin/org-roam-toolkit"
+repository = "https://github.com/iBenjamin/org-roam-toolkit"
+homepage = "https://github.com/iBenjamin/org-roam-toolkit"
 readme = "README.md"
 
 [[bin]]

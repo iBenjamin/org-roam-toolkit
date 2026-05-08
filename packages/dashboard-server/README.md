@@ -7,7 +7,7 @@ Rust binary, axum + HTMX, embeds its own JS / CSS at compile time.
 
 ```bash
 cargo run --release -- --port 9876
-# or, after `brew install iwangkaimin/tap/org-roam-toolkit`:
+# or, after `brew install iBenjamin/tap/org-roam-toolkit`:
 ortk-dashboard --port 9876
 ```
 

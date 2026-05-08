@@ -10,7 +10,7 @@ End-to-end org-roam workflows for Claude Code.
 
 ## Runtime requirements
 
-This plugin **requires** the `iwangkaimin/tap/org-roam-toolkit` Homebrew package, which provides the bins the skills/commands and `.mcp.json` call on PATH:
+This plugin **requires** the `iBenjamin/tap/org-roam-toolkit` Homebrew package, which provides the bins the skills/commands and `.mcp.json` call on PATH:
 
 | Bin | Purpose |
 |---|---|
@@ -26,11 +26,11 @@ You also need a running Emacs daemon with `org-roam` loaded.
 
 ```bash
 # 1. Install the bins (one-time)
-brew tap iwangkaimin/tap
+brew tap iBenjamin/tap
 brew install org-roam-toolkit
 
 # 2. Install the plugin (this directory) into Claude Code
-claude marketplace add github:iwangkaimin/org-roam-toolkit
+claude marketplace add github:iBenjamin/org-roam-toolkit
 claude plugin install org-roam-toolkit
 ```
 

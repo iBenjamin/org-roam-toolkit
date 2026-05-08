@@ -4,23 +4,23 @@
 # Homebrew formula for org-roam-toolkit.
 #
 # This file lives in the source repository for development. The version
-# distributed via the tap (iwangkaimin/homebrew-tap) is a copy with the
+# distributed via the tap (iBenjamin/homebrew-tap) is a copy with the
 # `url` and `sha256` updated to the latest release tarball.
 #
 # Local-source build (no tap required):
 #   brew install --build-from-source ./Formula/org-roam-toolkit.rb
 #
 # Tap-based install (after publishing):
-#   brew tap iwangkaimin/tap
+#   brew tap iBenjamin/tap
 #   brew install org-roam-toolkit
 
 class OrgRoamToolkit < Formula
   desc "MCP server, dashboard, and Claude Code plugin for an Emacs/org-roam knowledge base"
-  homepage "https://github.com/iwangkaimin/org-roam-toolkit"
-  url "https://github.com/iwangkaimin/org-roam-toolkit/archive/refs/tags/v0.1.0.tar.gz"
+  homepage "https://github.com/iBenjamin/org-roam-toolkit"
+  url "https://github.com/iBenjamin/org-roam-toolkit/archive/refs/tags/v0.1.0.tar.gz"
   sha256 "0000000000000000000000000000000000000000000000000000000000000000"
   license "MIT"
-  head "https://github.com/iwangkaimin/org-roam-toolkit.git", branch: "main"
+  head "https://github.com/iBenjamin/org-roam-toolkit.git", branch: "main"
 
   depends_on "node"
   depends_on "rust" => :build

@@ -8,7 +8,7 @@ macOS only.
 
 ```bash
 # 1. Install the bins via Homebrew
-brew tap iwangkaimin/tap
+brew tap iBenjamin/tap
 brew install org-roam-toolkit
 
 # 2. Symlink the Claude Code plugin into ~/.claude/plugins/
@@ -61,7 +61,7 @@ org-roam-toolkit/
 │   └── org-roam-toolkit/           # Claude Code plugin (commands + skills + .mcp.json)
 │
 ├── Formula/
-│   └── org-roam-toolkit.rb         # Source-of-truth Homebrew formula (mirrored to iwangkaimin/homebrew-tap)
+│   └── org-roam-toolkit.rb         # Source-of-truth Homebrew formula (mirrored to iBenjamin/homebrew-tap)
 │
 └── docs/                           # developer documentation
 ```

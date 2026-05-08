@@ -8,9 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Homebrew distribution: `brew install iwangkaimin/tap/org-roam-toolkit` installs all bins (`ortk-mcp`, `ortk-emacs-eval`, `ortk-fetch`, `ortk-ocr`, `ortk-dashboard`).
+- Homebrew distribution: `brew install iBenjamin/tap/org-roam-toolkit` installs all bins (`ortk-mcp`, `ortk-emacs-eval`, `ortk-fetch`, `ortk-ocr`, `ortk-dashboard`).
 - `brew services start org-roam-toolkit` to autostart the dashboard at login.
-- `Formula/org-roam-toolkit.rb` source-of-truth formula in this repo (mirrored to `iwangkaimin/homebrew-tap`).
+- `Formula/org-roam-toolkit.rb` source-of-truth formula in this repo (mirrored to `iBenjamin/homebrew-tap`).
 - `LICENSE` (MIT) at repo root and `license` field on every package.
 - `AGENT.md` — project-level policy authorizing AI co-authorship in commits (vendor-neutral).
 - `ortk-dashboard` rewritten in Rust (axum + HTMX, single 2.4 MB static binary). Replaces the previous TypeScript + Svelte/Vite implementation that was hitting npm hoisting bugs on Node 24. The HTTP/JSON contract is unchanged; HTML output now uses HTMX `hx-trigger="every 5s"` for refresh instead of a Svelte SPA.
