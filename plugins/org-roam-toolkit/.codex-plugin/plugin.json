@@ -1,0 +1,44 @@
+{
+  "name": "org-roam-toolkit",
+  "version": "0.1.0",
+  "description": "End-to-end org-roam workflows for Codex: skills, commands, and the org-roam MCP server. Requires the Homebrew-installed bins (ortk-mcp, ortk-emacs-eval, ortk-fetch, ortk-ocr).",
+  "license": "MIT",
+  "author": {
+    "name": "Benjamin Wong",
+    "email": "iwangkaimin@gmail.com",
+    "url": "https://github.com/iBenjamin"
+  },
+  "homepage": "https://github.com/iBenjamin/org-roam-toolkit",
+  "repository": "https://github.com/iBenjamin/org-roam-toolkit",
+  "keywords": [
+    "org-roam",
+    "org-mode",
+    "emacs",
+    "mcp",
+    "codex",
+    "knowledge-base",
+    "zettelkasten"
+  ],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "org-roam toolkit",
+    "shortDescription": "Org-roam skills and MCP tools for Codex.",
+    "longDescription": "Use org-roam-toolkit from Codex with skills for org-mode, org-roam note management, web fetching, OCR, and local dashboard diagnostics. The plugin registers the org-roam MCP server backed by the Homebrew-installed ortk-mcp binary.",
+    "developerName": "Benjamin Wong",
+    "category": "Productivity",
+    "capabilities": [
+      "Skills",
+      "MCP"
+    ],
+    "websiteURL": "https://github.com/iBenjamin/org-roam-toolkit",
+    "privacyPolicyURL": "https://github.com/iBenjamin/org-roam-toolkit",
+    "termsOfServiceURL": "https://github.com/iBenjamin/org-roam-toolkit",
+    "defaultPrompt": [
+      "Search my org-roam notes for this topic.",
+      "Create an atomic org-roam note from this.",
+      "Check my org-roam dashboard health."
+    ],
+    "brandColor": "#2563EB"
+  }
+}
