@@ -1,0 +1,33 @@
+{
+  "name": "@org-roam-toolkit/emacs",
+  "version": "0.1.0",
+  "description": "Emacsclient wrapper, shared elisp packages, and TypeScript helpers",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "bin": {
+    "ortk-emacs-eval": "./bin/emacs-eval"
+  },
+  "files": [
+    "bin",
+    "lib",
+    "elisp",
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

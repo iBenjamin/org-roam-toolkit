@@ -1,0 +1,29 @@
+; -*- mode: emacs-lisp; lexical-binding: t; no-byte-compile: t -*-
+
+;; Project shape:
+;;   packages/emacs/
+;;   ├── Eldev                   <- you are here
+;;   ├── elisp/
+;;   │   ├── claude-skill-base/
+;;   │   ├── org-skill/
+;;   │   └── org-roam-skill/      <- main package for `eldev test`
+;;   └── test/                    <- shared test directory
+
+;; Use org-roam-skill as the headline package. Other elisp subpackages
+;; remain importable via `load-path' below.
+(setf eldev-project-main-file "elisp/org-roam-skill/org-roam-skill.el")
+
+(eldev-use-package-archive 'gnu)
+(eldev-use-package-archive 'melpa)
+
+;; Add every elisp subpackage directory to the load path.
+(dolist (dir '("elisp/claude-skill-base"
+               "elisp/org-skill"
+               "elisp/org-roam-skill"))
+  (add-to-list 'load-path (expand-file-name dir eldev-project-dir)))
+
+;; Allow loading test helpers from the shared test directory.
+(eldev-add-loading-roots 'test "test")
+
+;; Tell checkdoc not to demand two spaces after a period.
+(setq sentence-end-double-space nil)

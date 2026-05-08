@@ -1,0 +1,88 @@
+#!/bin/bash
+# emacs-eval — universal wrapper for emacsclient that auto-loads a project's elisp package.
+#
+# Usage:
+#   emacs-eval --pkg=PKG "(elisp expression)"
+#   emacs-eval --pkg=PKG --load-path=DIR "(elisp expression)"
+#   emacs-eval "(elisp expression)"          # no package required
+#
+# Convention: --pkg=NAME is loaded from <packages/emacs/elisp/NAME/>, providing 'NAME.
+# Override the directory with --load-path=DIR.
+
+set -euo pipefail
+
+# Resolve the script's real path through any number of symlinks (BSD-readlink
+# safe — macOS does not have `readlink -f`). This matters because Homebrew
+# installs us as `/opt/homebrew/bin/ortk-emacs-eval` → libexec/.../emacs-eval,
+# and we need to find `lib/` and `elisp/` relative to the real file.
+SOURCE="${BASH_SOURCE[0]}"
+while [ -L "$SOURCE" ]; do
+    LINK_DIR="$(cd "$(dirname "$SOURCE")" && pwd -P)"
+    TARGET="$(readlink "$SOURCE")"
+    case "$TARGET" in
+        /*) SOURCE="$TARGET" ;;
+        *)  SOURCE="$LINK_DIR/$TARGET" ;;
+    esac
+done
+SCRIPT_DIR="$(cd "$(dirname "$SOURCE")" && pwd -P)"
+EMACS_PKG_ROOT="$(dirname "$SCRIPT_DIR")"
+ELISP_ROOT="$EMACS_PKG_ROOT/elisp"
+
+# shellcheck source=../lib/emacs-client.sh
+source "$EMACS_PKG_ROOT/lib/emacs-client.sh"
+
+usage() {
+    cat <<'EOF'
+emacs-eval — universal wrapper for emacsclient that auto-loads a project's elisp package.
+
+Usage:
+  emacs-eval --pkg=PKG "(elisp expression)"
+  emacs-eval --pkg=PKG --load-path=DIR "(elisp expression)"
+  emacs-eval "(elisp expression)"          # no package required
+
+Convention: --pkg=NAME is loaded from <packages/emacs/elisp/NAME/>, providing 'NAME.
+Override the directory with --load-path=DIR.
+EOF
+    exit "${1:-0}"
+}
+
+PKG=""
+LOAD_PATH=""
+EXPR=""
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --pkg=*)        PKG="${1#--pkg=}"; shift ;;
+        --pkg)          PKG="$2"; shift 2 ;;
+        --load-path=*)  LOAD_PATH="${1#--load-path=}"; shift ;;
+        --load-path)    LOAD_PATH="$2"; shift 2 ;;
+        --help|-h)      usage 0 ;;
+        --) shift; EXPR="${1:-}"; break ;;
+        -*) echo "Unknown option: $1" >&2; usage 1 ;;
+        *)  EXPR="$1"; shift; break ;;
+    esac
+done
+
+if [[ -z "$EXPR" ]]; then
+    echo "Error: missing elisp expression" >&2
+    usage 1
+fi
+
+emacs_require_daemon
+
+# claude-skill-base is the shared base every package may depend on.
+# Always ensure it is available before loading user packages.
+emacs_ensure_pkg "claude-skill-base" "$ELISP_ROOT/claude-skill-base"
+
+if [[ -n "$PKG" && "$PKG" != "claude-skill-base" ]]; then
+    if [[ -z "$LOAD_PATH" ]]; then
+        LOAD_PATH="$ELISP_ROOT/$PKG"
+    fi
+    if [[ ! -d "$LOAD_PATH" ]]; then
+        echo "Error: load path not found: $LOAD_PATH" >&2
+        exit 1
+    fi
+    emacs_ensure_pkg "$PKG" "$LOAD_PATH"
+fi
+
+emacsclient --eval "$EXPR"
