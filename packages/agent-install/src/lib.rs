@@ -121,7 +121,8 @@ fn table_range(content: &str, table: &str) -> Option<(usize, usize)> {
     let mut offset = 0;
 
     for line in content.split_inclusive('\n') {
-        let trimmed = line.trim();
+        let uncommented = strip_inline_comment(line);
+        let trimmed = uncommented.trim();
         if trimmed.starts_with('[') && trimmed.ends_with(']') {
             if start.is_some() {
                 end = offset;
@@ -141,9 +142,45 @@ fn table_body(content: &str, range: (usize, usize)) -> &str {
     &content[range.0..range.1]
 }
 
+fn strip_inline_comment(line: &str) -> &str {
+    let mut in_basic_string = false;
+    let mut in_literal_string = false;
+    let mut escaped = false;
+
+    for (index, ch) in line.char_indices() {
+        if in_basic_string {
+            if escaped {
+                escaped = false;
+            } else if ch == '\\' {
+                escaped = true;
+            } else if ch == '"' {
+                in_basic_string = false;
+            }
+            continue;
+        }
+
+        if in_literal_string {
+            if ch == '\'' {
+                in_literal_string = false;
+            }
+            continue;
+        }
+
+        match ch {
+            '"' => in_basic_string = true,
+            '\'' => in_literal_string = true,
+            '#' => return &line[..index],
+            _ => {}
+        }
+    }
+
+    line
+}
+
 fn quoted_value_for_key(table: &str, key: &str) -> Option<String> {
     for line in table.lines() {
-        let trimmed = line.trim();
+        let uncommented = strip_inline_comment(line);
+        let trimmed = uncommented.trim();
         if let Some((lhs, rhs)) = trimmed.split_once('=') {
             if lhs.trim() == key {
                 return Some(rhs.trim().trim_matches('"').to_string());
@@ -155,7 +192,8 @@ fn quoted_value_for_key(table: &str, key: &str) -> Option<String> {
 
 fn has_key(table: &str, key: &str) -> bool {
     table.lines().any(|line| {
-        line.trim()
+        strip_inline_comment(line)
+            .trim()
             .split_once('=')
             .map(|(lhs, _)| lhs.trim() == key)
             .unwrap_or(false)
@@ -418,6 +456,62 @@ mod tests {
     }
 
     #[test]
+    fn codex_install_is_idempotent_when_target_header_has_trailing_comment() {
+        let root = TempDir::new().unwrap();
+        let plugin = temp_plugin(&root);
+        let opts = options(root.path().join("home"), plugin);
+        let config_path = opts.home.join(".codex/config.toml");
+        fs::create_dir_all(config_path.parent().unwrap()).unwrap();
+        fs::write(
+            &config_path,
+            "[mcp_servers.org-roam] # org-roam server\ncommand = \"ortk-mcp\"\n",
+        )
+        .unwrap();
+
+        let summary = install_codex(&opts).unwrap();
+
+        assert_eq!(
+            fs::read_to_string(&config_path).unwrap(),
+            "[mcp_servers.org-roam] # org-roam server\ncommand = \"ortk-mcp\"\n",
+        );
+        assert!(!opts
+            .home
+            .join(".codex/config.toml.bak-20260508220000")
+            .exists());
+        assert!(summary
+            .iter()
+            .any(|line| line.contains("already configured")));
+    }
+
+    #[test]
+    fn codex_install_is_idempotent_when_command_has_trailing_comment() {
+        let root = TempDir::new().unwrap();
+        let plugin = temp_plugin(&root);
+        let opts = options(root.path().join("home"), plugin);
+        let config_path = opts.home.join(".codex/config.toml");
+        fs::create_dir_all(config_path.parent().unwrap()).unwrap();
+        fs::write(
+            &config_path,
+            "[mcp_servers.org-roam]\ncommand = \"ortk-mcp\" # installed by org-roam-toolkit\n",
+        )
+        .unwrap();
+
+        let summary = install_codex(&opts).unwrap();
+
+        assert_eq!(
+            fs::read_to_string(&config_path).unwrap(),
+            "[mcp_servers.org-roam]\ncommand = \"ortk-mcp\" # installed by org-roam-toolkit\n",
+        );
+        assert!(!opts
+            .home
+            .join(".codex/config.toml.bak-20260508220000")
+            .exists());
+        assert!(summary
+            .iter()
+            .any(|line| line.contains("already configured")));
+    }
+
+    #[test]
     fn codex_install_refuses_conflicting_mcp_server() {
         let root = TempDir::new().unwrap();
         let plugin = temp_plugin(&root);
@@ -460,6 +554,28 @@ mod tests {
         assert!(config.contains("[mcp_servers.org-roam]\ncommand = \"ortk-mcp\""));
         assert!(!config.contains("args = [\"bad\"]"));
         assert!(config.contains("[projects.\"/tmp\"]\ntrust_level = \"trusted\""));
+    }
+
+    #[test]
+    fn codex_force_replaces_conflict_without_eating_following_commented_header() {
+        let root = TempDir::new().unwrap();
+        let plugin = temp_plugin(&root);
+        let mut opts = options(root.path().join("home"), plugin);
+        opts.force = true;
+        let config_path = opts.home.join(".codex/config.toml");
+        fs::create_dir_all(config_path.parent().unwrap()).unwrap();
+        fs::write(
+            &config_path,
+            "model = \"gpt-5.5\"\n\n[mcp_servers.org-roam]\ncommand = \"other\"\nargs = [\"bad\"]\n\n[projects.\"/tmp\"] # local project\ntrust_level = \"trusted\"\n",
+        )
+        .unwrap();
+
+        install_codex(&opts).unwrap();
+
+        let config = fs::read_to_string(&config_path).unwrap();
+        assert!(config.contains("[mcp_servers.org-roam]\ncommand = \"ortk-mcp\""));
+        assert!(!config.contains("args = [\"bad\"]"));
+        assert!(config.contains("[projects.\"/tmp\"] # local project\ntrust_level = \"trusted\""));
     }
 
     #[test]
