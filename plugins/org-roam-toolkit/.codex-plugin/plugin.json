@@ -1,7 +1,7 @@
 {
   "name": "org-roam-toolkit",
   "version": "0.1.0",
-  "description": "End-to-end org-roam workflows for Codex: skills, commands, and the org-roam MCP server. Requires the Homebrew-installed bins (ortk-mcp, ortk-emacs-eval, ortk-fetch, ortk-ocr).",
+  "description": "End-to-end org-roam workflows for Codex: skills and the org-roam MCP server. Requires the Homebrew-installed bins (ortk-mcp, ortk-emacs-eval, ortk-fetch, ortk-ocr).",
   "license": "MIT",
   "author": {
     "name": "Benjamin Wong",
@@ -32,8 +32,6 @@
       "MCP"
     ],
     "websiteURL": "https://github.com/iBenjamin/org-roam-toolkit",
-    "privacyPolicyURL": "https://github.com/iBenjamin/org-roam-toolkit",
-    "termsOfServiceURL": "https://github.com/iBenjamin/org-roam-toolkit",
     "defaultPrompt": [
       "Search my org-roam notes for this topic.",
       "Create an atomic org-roam note from this.",
