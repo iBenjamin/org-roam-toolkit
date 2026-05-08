@@ -234,13 +234,20 @@ pub fn backup_suffix_now() -> String {
     Local::now().format("%Y%m%d%H%M%S").to_string()
 }
 
+fn installed_plugin_dir_from_exe(exe: &Path) -> Option<PathBuf> {
+    let exe = exe.canonicalize().unwrap_or_else(|_| exe.to_path_buf());
+    let installed = exe
+        .parent()
+        .and_then(Path::parent)?
+        .join("libexec/plugins")
+        .join(PLUGIN_NAME);
+    installed.exists().then_some(installed)
+}
+
 pub fn default_plugin_dir() -> anyhow::Result<PathBuf> {
     let exe = env::current_exe().context("resolve current executable path")?;
-    if let Some(prefix) = exe.parent().and_then(Path::parent) {
-        let installed = prefix.join("libexec/plugins").join(PLUGIN_NAME);
-        if installed.exists() {
-            return Ok(installed);
-        }
+    if let Some(installed) = installed_plugin_dir_from_exe(&exe) {
+        return Ok(installed);
     }
 
     let dev = env::current_dir()
@@ -1055,5 +1062,25 @@ mod tests {
 
         assert_eq!(suffix.len(), 14);
         assert!(suffix.chars().all(|ch| ch.is_ascii_digit()));
+    }
+
+    #[test]
+    fn installed_plugin_dir_from_exe_resolves_homebrew_bin_symlink() {
+        let root = TempDir::new().unwrap();
+        let cellar = root.path().join("Cellar/org-roam-toolkit/0.2.1");
+        let bin = cellar.join("bin");
+        let plugin = cellar.join("libexec/plugins/org-roam-toolkit");
+        fs::create_dir_all(&bin).unwrap();
+        fs::create_dir_all(&plugin).unwrap();
+        fs::write(bin.join("ortk-agent-install"), "").unwrap();
+        let prefix_bin = root.path().join("bin");
+        fs::create_dir_all(&prefix_bin).unwrap();
+        let symlink_path = prefix_bin.join("ortk-agent-install");
+        symlink(cellar.join("bin/ortk-agent-install"), &symlink_path).unwrap();
+
+        assert_eq!(
+            installed_plugin_dir_from_exe(&symlink_path).unwrap(),
+            plugin.canonicalize().unwrap()
+        );
     }
 }

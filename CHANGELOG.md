@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-05-09
+
+### Fixed
+- `ortk-agent-install` now resolves Homebrew's `bin/ortk-agent-install` symlink before inferring the bundled plugin directory, so `ortk-agent-install all` installs the Homebrew plugin instead of falling back to a source checkout.
+
 ## [0.2.0] - 2026-05-09
 
 ### Added

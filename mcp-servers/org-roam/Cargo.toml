@@ -1,6 +1,6 @@
 [package]
 name = "ortk-mcp"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2021"
 license = "MIT"
 description = "MCP server for org-roam operations via ortk-emacs-eval"

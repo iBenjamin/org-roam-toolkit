@@ -1,6 +1,6 @@
 [package]
 name = "ortk-dashboard"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2021"
 license = "MIT"
 description = "Local observability dashboard for the org-roam-toolkit (axum + HTMX, single static binary)"

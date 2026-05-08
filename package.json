@@ -1,6 +1,6 @@
 {
   "name": "org-roam-toolkit",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "private": true,
   "description": "MCP server, observability dashboard, and Claude Code plugin for an Emacs/org-roam knowledge base. Distributed as a Homebrew tap.",
   "license": "MIT",
