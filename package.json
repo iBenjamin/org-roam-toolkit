@@ -1,0 +1,43 @@
+{
+  "name": "org-roam-toolkit",
+  "version": "0.1.0",
+  "private": true,
+  "description": "MCP server, observability dashboard, and Claude Code plugin for an Emacs/org-roam knowledge base. Distributed as a Homebrew tap.",
+  "license": "MIT",
+  "author": "Benjamin Wong <iwangkaimin@gmail.com>",
+  "homepage": "https://github.com/iwangkaimin/org-roam-toolkit#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/iwangkaimin/org-roam-toolkit.git"
+  },
+  "bugs": {
+    "url": "https://github.com/iwangkaimin/org-roam-toolkit/issues"
+  },
+  "keywords": [
+    "org-roam",
+    "org-mode",
+    "emacs",
+    "mcp",
+    "claude-code",
+    "knowledge-base",
+    "zettelkasten"
+  ],
+  "workspaces": [
+    "packages/*",
+    "mcp-servers/*"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "test": "npm run --workspaces --if-present test",
+    "lint": "npm run --workspaces --if-present lint",
+    "clean": "tsc -b --clean"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "typescript": "^5.4.0",
+    "vitest": "^1.6.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
