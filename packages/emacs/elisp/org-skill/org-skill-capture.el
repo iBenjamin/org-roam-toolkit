@@ -13,11 +13,23 @@
 (require 'org)
 (require 'org-capture)
 
+(defgroup org-skill nil
+  "Programmatic org-mode agenda and capture helpers."
+  :group 'org)
+
+(defcustom org-skill-todo-file "~/Documents/org/todo.org"
+  "Path to the org file used by `org-skill-capture-todo' and `org-skill-capture-note'.
+The file should contain (or will be given) top-level `* Inbox' and
+`* Notes' headings; new entries are appended under the appropriate one."
+  :type 'file
+  :group 'org-skill)
+
 (defun org-skill-capture-todo (title &optional scheduled deadline priority)
   "Capture a TODO with TITLE.
 Optional SCHEDULED and DEADLINE are date strings (e.g., \"2025-01-25\").
-Optional PRIORITY is a character (A, B, or C)."
-  (let* ((file (expand-file-name "~/Documents/org/todo.org"))
+Optional PRIORITY is a character (A, B, or C).
+Writes to `org-skill-todo-file'."
+  (let* ((file (expand-file-name org-skill-todo-file))
          (priority-str (when priority (format "[#%c] " priority)))
          (props (format ":PROPERTIES:\n:CREATED: %s\n:END:\n"
                         (format-time-string "[%Y-%m-%d %a %H:%M]")))
@@ -45,8 +57,9 @@ Optional PRIORITY is a character (A, B, or C)."
     (format "Created TODO: %s" title)))
 
 (defun org-skill-capture-note (title &optional content)
-  "Capture a note with TITLE and optional CONTENT."
-  (let* ((file (expand-file-name "~/Documents/org/todo.org"))
+  "Capture a note with TITLE and optional CONTENT.
+Writes to `org-skill-todo-file' under a top-level `* Notes' heading."
+  (let* ((file (expand-file-name org-skill-todo-file))
          (props (format ":PROPERTIES:\n:CREATED: %s\n:END:\n"
                         (format-time-string "[%Y-%m-%d %a %H:%M]")))
          (body (or content "")))

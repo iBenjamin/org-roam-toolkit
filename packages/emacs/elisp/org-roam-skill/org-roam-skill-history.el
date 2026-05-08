@@ -15,6 +15,16 @@
 (require 'org-roam-skill-core)
 (require 'url-util)
 
+(defcustom org-roam-skill-to-read-file nil
+  "Path to the org file used by `org-roam-skill-add-to-read' for the read-later inbox.
+If nil, defaults to `todo.org' in the parent directory of
+`org-roam-directory' (typical setup: org-roam notes live under
+`~/notes/roam/' and `todo.org' lives at `~/notes/todo.org').
+The file must contain a top-level `* Inbox' heading."
+  :type '(choice (const :tag "Auto: todo.org alongside org-roam-directory" nil)
+                 (file :tag "Custom file"))
+  :group 'org-roam)
+
 (defun org-roam-skill--get-quarter-file ()
   "Return path to current quarter's reading history file."
   (let* ((month (string-to-number (format-time-string "%m")))
@@ -104,19 +114,20 @@ Returns the file path where entry was added."
 
 ;;;###autoload
 (cl-defun org-roam-skill-add-to-read (title url &key summary)
-  "Add a TODO item to read later in todo.org Inbox.
+  "Add a TODO item to read later under `* Inbox' in the read-later file.
 
 TITLE is the article title (required).
 URL is the link to read later (required).
 SUMMARY is a brief description of what it's about.
 
-Returns the file path where entry was added.
+The destination file is `org-roam-skill-to-read-file' if set; otherwise
+`todo.org' in the parent directory of `org-roam-directory'.
 
-Note: todo.org is expected in the parent directory of `org-roam-directory',
-since org-roam notes typically live in a subdirectory like roam/."
-  (let* ((file-path (expand-file-name "todo.org"
-                                      (file-name-directory
-                                       (directory-file-name org-roam-directory))))
+Returns the file path where entry was added."
+  (let* ((file-path (or org-roam-skill-to-read-file
+                        (expand-file-name "todo.org"
+                                          (file-name-directory
+                                           (directory-file-name org-roam-directory)))))
          (timestamp (format-time-string "[%Y-%m-%d %a %H:%M]")))
     (with-current-buffer (find-file-noselect file-path)
       ;; Find Inbox heading
@@ -133,7 +144,7 @@ since org-roam notes typically live in a subdirectory like roam/."
             (when summary
               (insert (format "%s\n" summary)))
             (insert "\n"))
-        (error "No Inbox heading found in todo.org"))
+        (error "No `* Inbox' heading found in %s" file-path))
       (save-buffer)
       (kill-buffer))
     file-path))

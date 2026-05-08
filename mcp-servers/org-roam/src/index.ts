@@ -193,7 +193,8 @@ const tools: Tool[] = [
   },
   {
     name: 'roam_add_to_read',
-    description: 'Add a TODO item to read later in todo.org Inbox.',
+    description:
+      'Add a TODO item to read later under * Inbox in the read-later file (controlled by `org-roam-skill-to-read-file`; defaults to todo.org alongside org-roam-directory).',
     inputSchema: {
       type: 'object',
       properties: {

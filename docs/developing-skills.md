@@ -74,5 +74,3 @@ A skill should not contain `.ts` or `.el` files. The plugin is auto-discovered b
 
 - **Don't** spawn `emacsclient` directly from a skill or MCP server. Always go through `ortk-emacs-eval` (or `evalElisp` from `@org-roam-toolkit/emacs`).
 - **Don't** put extraction rules, regex, or daemon state into `plugins/org-roam-toolkit/skills/`. They belong in `packages/`.
-- **Don't** edit `claude-skills/` (the legacy reference repo at `/Users/ben/myworkspace/claude-skills`). It is read-only material; new code lives here.
-- **Don't** add `Co-Authored-By` or AI attribution to commit messages.
