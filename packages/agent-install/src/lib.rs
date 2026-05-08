@@ -26,6 +26,18 @@ pub enum InstallOutcome {
     WouldReplace,
 }
 
+#[derive(Debug, PartialEq, Eq)]
+enum PluginLinkSnapshot {
+    Missing,
+    Symlink(PathBuf),
+}
+
+enum CodexConfigRollback {
+    None,
+    RemoveNew(PathBuf),
+    RestoreBackup { config: PathBuf, backup: PathBuf },
+}
+
 fn plugin_link_path(home: &Path, agent_dir: &str) -> PathBuf {
     home.join(agent_dir).join("plugins").join(PLUGIN_NAME)
 }
@@ -34,6 +46,48 @@ fn same_link_target(link: &Path, plugin_dir: &Path) -> bool {
     fs::read_link(link)
         .map(|target| target == plugin_dir)
         .unwrap_or(false)
+}
+
+fn snapshot_plugin_symlink(home: &Path, agent_dir: &str) -> anyhow::Result<PluginLinkSnapshot> {
+    let target = plugin_link_path(home, agent_dir);
+
+    if target.exists() || target.is_symlink() {
+        let meta = fs::symlink_metadata(&target)
+            .with_context(|| format!("inspect {}", target.display()))?;
+        if !meta.file_type().is_symlink() {
+            bail!("{} exists and is not a symlink", target.display());
+        }
+        return Ok(PluginLinkSnapshot::Symlink(
+            fs::read_link(&target).with_context(|| format!("read {}", target.display()))?,
+        ));
+    }
+
+    Ok(PluginLinkSnapshot::Missing)
+}
+
+fn restore_plugin_symlink(
+    home: &Path,
+    agent_dir: &str,
+    snapshot: &PluginLinkSnapshot,
+) -> anyhow::Result<()> {
+    let target = plugin_link_path(home, agent_dir);
+
+    if target.exists() || target.is_symlink() {
+        let meta = fs::symlink_metadata(&target)
+            .with_context(|| format!("inspect {}", target.display()))?;
+        if !meta.file_type().is_symlink() {
+            bail!("{} exists and is not a symlink", target.display());
+        }
+        fs::remove_file(&target).with_context(|| format!("remove {}", target.display()))?;
+    }
+
+    if let PluginLinkSnapshot::Symlink(previous_target) = snapshot {
+        let parent = target.parent().context("plugin target has no parent")?;
+        fs::create_dir_all(parent).with_context(|| format!("create {}", parent.display()))?;
+        symlink(previous_target, &target).with_context(|| format!("link {}", target.display()))?;
+    }
+
+    Ok(())
 }
 
 fn install_plugin_symlink(
@@ -78,8 +132,25 @@ fn install_plugin_symlink(
                 ),
             ));
         }
+        let previous_target =
+            fs::read_link(&target).with_context(|| format!("read {}", target.display()))?;
         fs::remove_file(&target).with_context(|| format!("remove {}", target.display()))?;
-        symlink(plugin_dir, &target).with_context(|| format!("link {}", target.display()))?;
+        if let Err(err) =
+            symlink(plugin_dir, &target).with_context(|| format!("link {}", target.display()))
+        {
+            if let Err(rollback_err) = symlink(&previous_target, &target)
+                .with_context(|| format!("restore {}", target.display()))
+            {
+                bail!(
+                    "failed to replace {}: {err:#}; additionally failed to restore previous link: {rollback_err:#}",
+                    target.display()
+                );
+            }
+            bail!(
+                "failed to replace {} and restored previous link: {err:#}",
+                target.display()
+            );
+        }
         return Ok((
             InstallOutcome::Replaced,
             format!("replaced: {} -> {}", target.display(), plugin_dir.display()),
@@ -117,13 +188,45 @@ pub fn install_claude(options: &InstallOptions) -> anyhow::Result<Vec<String>> {
 }
 
 pub fn install_all(options: &InstallOptions) -> anyhow::Result<Vec<String>> {
+    preflight_plugin_symlink(&options.home, ".claude", &options.plugin_dir, options.force)?;
     preflight_codex(options)?;
+    let claude_before = snapshot_plugin_symlink(&options.home, ".claude")?;
 
     let mut summary = Vec::new();
     summary.push("Claude:".to_string());
-    summary.extend(install_claude(options)?);
+    let (claude_outcome, claude_line) = install_plugin_symlink(
+        &options.home,
+        ".claude",
+        &options.plugin_dir,
+        options.dry_run,
+        options.force,
+    )?;
+    summary.push(claude_line);
     summary.push("Codex:".to_string());
-    summary.extend(install_codex(options)?);
+    match install_codex(options) {
+        Ok(lines) => summary.extend(lines),
+        Err(err) => {
+            if !options.dry_run
+                && matches!(
+                    claude_outcome,
+                    InstallOutcome::Created | InstallOutcome::Replaced
+                )
+            {
+                if let Err(rollback_err) =
+                    restore_plugin_symlink(&options.home, ".claude", &claude_before)
+                {
+                    bail!(
+                        "failed to install Codex after installing Claude: {err:#}; \
+                         additionally failed to roll back Claude plugin link: {rollback_err:#}"
+                    );
+                }
+                return Err(err).context(
+                    "failed to install Codex after installing Claude; rolled back Claude plugin link",
+                );
+            }
+            return Err(err);
+        }
+    }
     Ok(summary)
 }
 
@@ -314,6 +417,50 @@ fn write_backup(config_path: &Path, suffix: &str) -> anyhow::Result<PathBuf> {
     Ok(backup)
 }
 
+fn write_file_atomic(path: &Path, content: &str, suffix: &str) -> anyhow::Result<()> {
+    let parent = path.parent().context("config path has no parent")?;
+    let file_name = path
+        .file_name()
+        .and_then(|name| name.to_str())
+        .context("config path has no file name")?;
+    let tmp_path = parent.join(format!(".{file_name}.tmp-{}-{suffix}", std::process::id()));
+
+    let write_result = (|| -> anyhow::Result<()> {
+        fs::write(&tmp_path, content).with_context(|| format!("write {}", tmp_path.display()))?;
+        if let Ok(metadata) = fs::metadata(path) {
+            fs::set_permissions(&tmp_path, metadata.permissions())
+                .with_context(|| format!("set permissions on {}", tmp_path.display()))?;
+        }
+        fs::rename(&tmp_path, path).with_context(|| format!("replace {}", path.display()))?;
+        Ok(())
+    })();
+
+    if write_result.is_err() {
+        let _ = fs::remove_file(&tmp_path);
+    }
+
+    write_result
+}
+
+fn rollback_codex_config(rollback: &CodexConfigRollback, suffix: &str) -> anyhow::Result<bool> {
+    match rollback {
+        CodexConfigRollback::None => Ok(false),
+        CodexConfigRollback::RemoveNew(path) => {
+            if path.exists() {
+                fs::remove_file(path).with_context(|| format!("remove {}", path.display()))?;
+            }
+            Ok(true)
+        }
+        CodexConfigRollback::RestoreBackup { config, backup } => {
+            let previous = fs::read_to_string(backup)
+                .with_context(|| format!("read backup {}", backup.display()))?;
+            write_file_atomic(config, &previous, suffix)
+                .with_context(|| format!("restore {}", config.display()))?;
+            Ok(true)
+        }
+    }
+}
+
 fn planned_codex_config(options: &InstallOptions) -> anyhow::Result<(PathBuf, Option<String>)> {
     let config_path = options.home.join(".codex/config.toml");
     let planned_config = if config_path.exists() {
@@ -363,6 +510,7 @@ pub fn install_codex(options: &InstallOptions) -> anyhow::Result<Vec<String>> {
     preflight_plugin_symlink(&options.home, ".codex", &options.plugin_dir, options.force)?;
 
     let mut summary = Vec::new();
+    let mut config_rollback = CodexConfigRollback::None;
 
     match (config_path.exists(), planned_config) {
         (false, Some(_)) if options.dry_run => {
@@ -374,8 +522,8 @@ pub fn install_codex(options: &InstallOptions) -> anyhow::Result<Vec<String>> {
         (false, Some(next)) => {
             fs::create_dir_all(&codex_dir)
                 .with_context(|| format!("create {}", codex_dir.display()))?;
-            fs::write(&config_path, next)
-                .with_context(|| format!("write {}", config_path.display()))?;
+            write_file_atomic(&config_path, &next, &options.backup_suffix)?;
+            config_rollback = CodexConfigRollback::RemoveNew(config_path.clone());
             summary.push(format!("created: {}", config_path.display()));
         }
         (true, None) => {
@@ -392,21 +540,40 @@ pub fn install_codex(options: &InstallOptions) -> anyhow::Result<Vec<String>> {
         }
         (true, Some(next)) => {
             let backup = write_backup(&config_path, &options.backup_suffix)?;
-            fs::write(&config_path, next)
-                .with_context(|| format!("write {}", config_path.display()))?;
+            write_file_atomic(&config_path, &next, &options.backup_suffix)?;
+            config_rollback = CodexConfigRollback::RestoreBackup {
+                config: config_path.clone(),
+                backup: backup.clone(),
+            };
             summary.push(format!("backup: {}", backup.display()));
             summary.push(format!("updated: {}", config_path.display()));
         }
         (false, None) => unreachable!("missing config always needs creation"),
     }
 
-    let (_, link_line) = install_plugin_symlink(
+    let link_result = install_plugin_symlink(
         &options.home,
         ".codex",
         &options.plugin_dir,
         options.dry_run,
         options.force,
-    )?;
+    );
+    let (_, link_line) = match link_result {
+        Ok(link) => link,
+        Err(err) => match rollback_codex_config(&config_rollback, &options.backup_suffix) {
+            Ok(true) => {
+                return Err(err)
+                    .context("failed to install Codex plugin link; rolled back Codex config");
+            }
+            Ok(false) => return Err(err),
+            Err(rollback_err) => {
+                bail!(
+                    "failed to install Codex plugin link: {err:#}; \
+                         additionally failed to roll back Codex config: {rollback_err:#}"
+                );
+            }
+        },
+    };
     summary.insert(0, link_line);
 
     Ok(summary)
@@ -747,6 +914,29 @@ mod tests {
     }
 
     #[test]
+    fn codex_install_rolls_back_config_update_when_symlink_fails() {
+        let root = TempDir::new().unwrap();
+        let plugin = temp_plugin(&root);
+        let opts = options(root.path().join("home"), plugin);
+        let config_path = opts.home.join(".codex/config.toml");
+        fs::create_dir_all(config_path.parent().unwrap()).unwrap();
+        fs::write(&config_path, "model = \"gpt-5.5\"\n").unwrap();
+        fs::write(opts.home.join(".codex/plugins"), "not a directory").unwrap();
+
+        let err = install_codex(&opts).unwrap_err().to_string();
+
+        assert!(err.contains("rolled back Codex config"));
+        assert_eq!(
+            fs::read_to_string(&config_path).unwrap(),
+            "model = \"gpt-5.5\"\n"
+        );
+        assert!(opts
+            .home
+            .join(".codex/config.toml.bak-20260508220000")
+            .exists());
+    }
+
+    #[test]
     fn install_all_configures_claude_and_codex() {
         let root = TempDir::new().unwrap();
         let plugin = temp_plugin(&root);
@@ -787,6 +977,76 @@ mod tests {
         assert!(err.contains("conflicting"));
         assert!(!opts.home.join(".claude/plugins/org-roam-toolkit").exists());
         assert!(!opts.home.join(".codex/plugins/org-roam-toolkit").exists());
+    }
+
+    #[test]
+    fn install_all_rolls_back_created_claude_link_when_codex_update_fails() {
+        let root = TempDir::new().unwrap();
+        let plugin = temp_plugin(&root);
+        let opts = options(root.path().join("home"), plugin);
+        let config_path = opts.home.join(".codex/config.toml");
+        let backup_path = opts.home.join(".codex/config.toml.bak-20260508220000");
+        fs::create_dir_all(config_path.parent().unwrap()).unwrap();
+        fs::write(&config_path, "model = \"gpt-5.5\"\n").unwrap();
+        fs::create_dir_all(&backup_path).unwrap();
+
+        let err = install_all(&opts).unwrap_err().to_string();
+
+        assert!(err.contains("rolled back Claude plugin link"));
+        assert!(!opts.home.join(".claude/plugins/org-roam-toolkit").exists());
+        assert!(!opts.home.join(".codex/plugins/org-roam-toolkit").exists());
+        assert_eq!(
+            fs::read_to_string(&config_path).unwrap(),
+            "model = \"gpt-5.5\"\n"
+        );
+    }
+
+    #[test]
+    fn install_all_restores_replaced_claude_link_when_codex_update_fails() {
+        let root = TempDir::new().unwrap();
+        let plugin = temp_plugin(&root);
+        let previous_plugin = root.path().join("previous-plugin");
+        fs::create_dir_all(&previous_plugin).unwrap();
+        let mut opts = options(root.path().join("home"), plugin);
+        opts.force = true;
+        let claude_link = opts.home.join(".claude/plugins/org-roam-toolkit");
+        fs::create_dir_all(claude_link.parent().unwrap()).unwrap();
+        symlink(&previous_plugin, &claude_link).unwrap();
+        let config_path = opts.home.join(".codex/config.toml");
+        let backup_path = opts.home.join(".codex/config.toml.bak-20260508220000");
+        fs::create_dir_all(config_path.parent().unwrap()).unwrap();
+        fs::write(&config_path, "model = \"gpt-5.5\"\n").unwrap();
+        fs::create_dir_all(&backup_path).unwrap();
+
+        let err = install_all(&opts).unwrap_err().to_string();
+
+        assert!(err.contains("rolled back Claude plugin link"));
+        assert_eq!(fs::read_link(claude_link).unwrap(), previous_plugin);
+        assert!(!opts.home.join(".codex/plugins/org-roam-toolkit").exists());
+        assert_eq!(
+            fs::read_to_string(&config_path).unwrap(),
+            "model = \"gpt-5.5\"\n"
+        );
+    }
+
+    #[test]
+    fn install_all_rolls_back_claude_and_codex_config_when_codex_link_fails() {
+        let root = TempDir::new().unwrap();
+        let plugin = temp_plugin(&root);
+        let opts = options(root.path().join("home"), plugin);
+        let config_path = opts.home.join(".codex/config.toml");
+        fs::create_dir_all(config_path.parent().unwrap()).unwrap();
+        fs::write(&config_path, "model = \"gpt-5.5\"\n").unwrap();
+        fs::write(opts.home.join(".codex/plugins"), "not a directory").unwrap();
+
+        let err = install_all(&opts).unwrap_err().to_string();
+
+        assert!(err.contains("rolled back Claude plugin link"));
+        assert!(!opts.home.join(".claude/plugins/org-roam-toolkit").exists());
+        assert_eq!(
+            fs::read_to_string(&config_path).unwrap(),
+            "model = \"gpt-5.5\"\n"
+        );
     }
 
     #[test]
