@@ -87,10 +87,7 @@ async fn handshake() -> Result<Value, String> {
     }))
 }
 
-async fn write_json(
-    stdin: &mut tokio::process::ChildStdin,
-    msg: &Value,
-) -> Result<(), String> {
+async fn write_json(stdin: &mut tokio::process::ChildStdin, msg: &Value) -> Result<(), String> {
     let line = serde_json::to_string(msg).map_err(|e| e.to_string())?;
     stdin
         .write_all(line.as_bytes())

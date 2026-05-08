@@ -21,7 +21,7 @@ use cache::ProbeCache;
 #[command(
     name = "ortk-dashboard",
     about = "Local observability dashboard for the org-roam-toolkit",
-    version,
+    version
 )]
 struct Args {
     /// Listening port.

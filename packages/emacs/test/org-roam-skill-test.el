@@ -317,6 +317,28 @@
         (when (file-exists-p org-roam-directory)
           (delete-directory org-roam-directory t))))))
 
+  (it "creates the target subdirectory when it does not exist"
+    (let* ((org-roam-directory (make-temp-file "org-roam-test-" t))
+           (org-roam-db-location (expand-file-name "org-roam.db" org-roam-directory))
+           (org-roam-capture-templates
+            '(("d" "default" plain "%?"
+               :target (file+head "%<%Y%m%d%H%M%S>.org" "#+TITLE: ${title}")
+               :unnarrowed t)))
+           (target-dir (expand-file-name "projects" org-roam-directory)))
+      (unwind-protect
+          (progn
+            (org-roam-db-sync)
+            (expect (file-directory-p target-dir) :not :to-be-truthy)
+            (let ((file-path (org-roam-skill-create-note "Project Note"
+                                                          :subdirectory "projects"
+                                                          :content "Project content")))
+              (expect (file-directory-p target-dir) :to-be t)
+              (expect (file-exists-p file-path) :to-be t)
+              (expect (file-name-directory file-path) :to-equal
+                      (file-name-as-directory target-dir))))
+        (when (file-exists-p org-roam-directory)
+          (delete-directory org-roam-directory t))))))
+
 ;;; Temp File Cleanup Tests
 
 (describe "org-roam-skill--looks-like-temp-file"

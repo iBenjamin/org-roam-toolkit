@@ -67,6 +67,10 @@ Return the file path of the created note."
 
     (unwind-protect
         (progn
+          ;; Create the selected note bucket on first use.
+          (unless (file-directory-p target-dir)
+            (make-directory target-dir t))
+
           ;; Create the file with proper org-roam structure
           (with-temp-file file-path
             ;; Insert PROPERTIES block with ID and custom properties

@@ -51,8 +51,12 @@ async fn health_all(State(state): State<AppState>) -> Json<serde_json::Value> {
     let (daemon, mcp, roam_config, graph_stats) = tokio::join!(
         state.cache.get_or_run("daemon", probes::probe_daemon),
         state.cache.get_or_run("mcp", probes::probe_mcp),
-        state.cache.get_or_run("roam-config", probes::probe_roam_config),
-        state.cache.get_or_run("graph-stats", probes::probe_graph_stats),
+        state
+            .cache
+            .get_or_run("roam-config", probes::probe_roam_config),
+        state
+            .cache
+            .get_or_run("graph-stats", probes::probe_graph_stats),
     );
     Json(json!({
         "daemon": daemon,
@@ -68,15 +72,25 @@ async fn health_all(State(state): State<AppState>) -> Json<serde_json::Value> {
 async fn run(state: &AppState, slug: &str) -> Option<(&'static str, Probe)> {
     let cache = &state.cache;
     let (title, probe) = match slug {
-        "daemon" => ("Emacs Daemon", cache.get_or_run("daemon", probes::probe_daemon).await),
-        "mcp" => ("MCP Server", cache.get_or_run("mcp", probes::probe_mcp).await),
+        "daemon" => (
+            "Emacs Daemon",
+            cache.get_or_run("daemon", probes::probe_daemon).await,
+        ),
+        "mcp" => (
+            "MCP Server",
+            cache.get_or_run("mcp", probes::probe_mcp).await,
+        ),
         "roam-config" => (
             "org-roam Config",
-            cache.get_or_run("roam-config", probes::probe_roam_config).await,
+            cache
+                .get_or_run("roam-config", probes::probe_roam_config)
+                .await,
         ),
         "graph-stats" => (
             "Graph Stats",
-            cache.get_or_run("graph-stats", probes::probe_graph_stats).await,
+            cache
+                .get_or_run("graph-stats", probes::probe_graph_stats)
+                .await,
         ),
         _ => return None,
     };
@@ -85,7 +99,14 @@ async fn run(state: &AppState, slug: &str) -> Option<(&'static str, Probe)> {
 
 async fn asset_htmx() -> Response {
     static JS: &str = include_str!("../assets/htmx.min.js");
-    ([(header::CONTENT_TYPE, "application/javascript; charset=utf-8")], JS).into_response()
+    (
+        [(
+            header::CONTENT_TYPE,
+            "application/javascript; charset=utf-8",
+        )],
+        JS,
+    )
+        .into_response()
 }
 
 async fn asset_css() -> Response {

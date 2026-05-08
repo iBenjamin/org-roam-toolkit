@@ -69,11 +69,14 @@ export async function scrollToBottom(
   page: Page,
   stepPx = 800,
   delayMs = 300,
+  maxScrolls = 60,
 ): Promise<void> {
   let prevHeight = 0;
   let currHeight = await page.evaluate(() => document.body.scrollHeight);
-  while (prevHeight < currHeight) {
+  let scrolls = 0;
+  while (prevHeight < currHeight && scrolls < maxScrolls) {
     await page.evaluate((step: number) => window.scrollBy(0, step), stepPx);
+    scrolls += 1;
     await sleep(delayMs);
     prevHeight = currHeight;
     currHeight = await page.evaluate(() => document.body.scrollHeight);

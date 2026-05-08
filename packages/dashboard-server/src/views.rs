@@ -54,7 +54,11 @@ fn card_shell(slug: &str, title: &str) -> Markup {
 /// the entire card element (`hx-swap="outerHTML"`), so we re-emit the
 /// hx-* attributes so the next refresh keeps polling.
 pub fn card(slug: &str, title: &str, probe: &Probe) -> Markup {
-    let class = if probe.is_up() { "card card-up" } else { "card card-down" };
+    let class = if probe.is_up() {
+        "card card-up"
+    } else {
+        "card card-down"
+    };
     html! {
         section class=(class)
             id=(format!("card-{slug}"))
@@ -78,7 +82,9 @@ pub fn card(slug: &str, title: &str, probe: &Probe) -> Markup {
 }
 
 fn timestamp(t: chrono::DateTime<chrono::Utc>) -> String {
-    t.with_timezone(&chrono::Local).format("%H:%M:%S").to_string()
+    t.with_timezone(&chrono::Local)
+        .format("%H:%M:%S")
+        .to_string()
 }
 
 fn render_data(slug: &str, data: &Value) -> Markup {
@@ -132,14 +138,21 @@ fn render_mcp(data: &Value) -> Markup {
 }
 
 fn render_roam_config(data: &Value) -> Markup {
-    let dir = data.get("directory").and_then(|v| v.as_str()).unwrap_or("?");
+    let dir = data
+        .get("dir")
+        .or_else(|| data.get("directory"))
+        .and_then(|v| v.as_str())
+        .unwrap_or("?");
     let db = data.get("dbPath").and_then(|v| v.as_str()).unwrap_or("?");
     html! {
         dl {
             dt { "Directory" } dd.mono { (dir) }
             dt { "Database" }  dd.mono { (db) }
         }
-        @if let Some(subs) = data.get("subdirectories").and_then(|v| v.as_array()) {
+        @if let Some(subs) = data
+            .get("subdirs")
+            .or_else(|| data.get("subdirectories"))
+            .and_then(|v| v.as_array()) {
             p.subtitle { (subs.len()) " subdirectories" }
         }
     }
@@ -177,5 +190,27 @@ fn format_uptime(seconds: f64) -> String {
         format!("{m}m {s}s")
     } else {
         format!("{s}s")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use serde_json::json;
+
+    use super::*;
+
+    #[test]
+    fn renders_roam_config_shape_from_elisp_probe() {
+        let probe = Probe::up(json!({
+            "dir": "/tmp/roam",
+            "dbPath": "/tmp/roam/org-roam.db",
+            "subdirs": ["main", "reference"],
+        }));
+
+        let rendered = card("roam-config", "org-roam Config", &probe).into_string();
+
+        assert!(rendered.contains("/tmp/roam"));
+        assert!(rendered.contains("/tmp/roam/org-roam.db"));
+        assert!(rendered.contains("2 subdirectories"));
     }
 }
