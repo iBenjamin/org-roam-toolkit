@@ -15,37 +15,31 @@
 #   brew install org-roam-toolkit
 
 class OrgRoamToolkit < Formula
-  desc "MCP server, dashboard, and Claude Code plugin for an Emacs/org-roam knowledge base"
+  desc "MCP server and Claude Code plugin for Emacs org-roam"
   homepage "https://github.com/iBenjamin/org-roam-toolkit"
   url "https://github.com/iBenjamin/org-roam-toolkit/archive/refs/tags/v0.1.0.tar.gz"
   sha256 "70454d1341a904790c2de948c46df658671001ed12d73c216a957e59ced149ab"
   license "MIT"
   head "https://github.com/iBenjamin/org-roam-toolkit.git", branch: "main"
 
-  depends_on "node"
   depends_on "rust" => :build
+  depends_on "node"
 
   def install
     # --- Node side: emacs / web packages -------------------------------
     # Install Node deps for all workspaces and compile the TypeScript.
-    system "npm", "install", "--no-audit", "--no-fund", "--ignore-scripts"
+    system "npm", "install", *std_npm_args(prefix: false), "--no-audit", "--no-fund"
     system "npm", "run", "build"
     # Drop dev-only deps. Best-effort — npm prune may keep some entries
     # due to workspace edges; the resulting tree is still functional.
     system "npm", "prune", "--omit=dev"
 
     # --- Rust side: ortk-dashboard / ortk-mcp ---------------------------
-    cd "packages/dashboard-server" do
-      system "cargo", "build", "--release", "--locked"
-    end
-    cd "mcp-servers/org-roam" do
-      system "cargo", "build", "--release", "--locked"
-    end
+    system "cargo", "install", *std_cargo_args(path: "packages/dashboard-server")
+    system "cargo", "install", *std_cargo_args(path: "mcp-servers/org-roam")
 
-    # Install release binaries directly and keep Cargo build artifacts out
-    # of libexec; the target directories are large and not needed at runtime.
-    bin.install "mcp-servers/org-roam/target/release/ortk-mcp"
-    bin.install "packages/dashboard-server/target/release/ortk-dashboard"
+    # Keep Cargo build artifacts out of libexec; the target directories are
+    # large and not needed at runtime.
     rm_r "mcp-servers/org-roam/target"
     rm_r "packages/dashboard-server/target"
 
