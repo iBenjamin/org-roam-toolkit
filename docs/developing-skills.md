@@ -11,7 +11,7 @@ org-roam-toolkit/
 ├── mcp-servers/
 │   └── org-roam/                     # ortk-mcp Rust crate
 └── plugins/
-    └── org-roam-toolkit/             # Claude Code plugin
+    └── org-roam-toolkit/             # agent plugin
         ├── commands/                 # 9 slash commands
         └── skills/
             ├── atomic-notes/
@@ -49,7 +49,7 @@ Loading is automatic — `ortk-emacs-eval --pkg=<name>` finds it by directory co
 3. (Optional) `mkdir scripts/` with one-line bash wrappers that pre-apply common flags. Wrappers should be plain `exec ortk-... "$@"` — no path-traversal tricks.
 4. `chmod +x plugins/org-roam-toolkit/skills/<name>/scripts/<short-name>`
 
-A skill should not contain `.ts` or `.el` files. The plugin is auto-discovered by Claude Code once the whole `plugins/org-roam-toolkit/` directory is symlinked into `~/.claude/plugins/` (via `make install-claude` in dev, or the brew formula's caveats step in production).
+A skill should not contain `.ts` or `.el` files. Agents discover the whole `plugins/org-roam-toolkit/` directory after it is linked into their plugin directories: use `make install-claude`, `make install-codex`, or `make install-agents` in dev, and use `ortk-agent-install claude`, `ortk-agent-install codex`, or `ortk-agent-install all` after a Homebrew install.
 
 ## Adding a new web site handler
 

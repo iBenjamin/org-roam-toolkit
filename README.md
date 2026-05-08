@@ -1,6 +1,6 @@
 # org-roam-toolkit
 
-MCP server, observability dashboard, and Claude Code plugin for an Emacs / org-roam knowledge base. Distributed as a Homebrew tap.
+MCP server, observability dashboard, and agent plugin for an Emacs / org-roam knowledge base. Distributed as a Homebrew tap.
 
 macOS only.
 
@@ -11,15 +11,20 @@ macOS only.
 brew tap iBenjamin/tap
 brew install org-roam-toolkit
 
-# 2. Symlink the Claude Code plugin into ~/.claude/plugins/
-ln -snf "$(brew --prefix org-roam-toolkit)/libexec/plugins/org-roam-toolkit" \
-        ~/.claude/plugins/org-roam-toolkit
+# 2. Install the agent plugin for Claude Code and Codex
+ortk-agent-install all
+
+# Optional: install only one agent integration
+ortk-agent-install claude
+ortk-agent-install codex
 
 # 3. (optional) Auto-start the dashboard at login
 brew services start org-roam-toolkit       # http://127.0.0.1:9876
 ```
 
-After step 2, restart Claude Code to load the plugin.
+`ortk-agent-install` links the selected agent plugin directories into place. For Codex, it also adds `[mcp_servers.org-roam]` to `~/.codex/config.toml`; when an existing Codex config would change, the installer writes a timestamped backup first.
+
+After step 2, restart Claude Code or Codex to load the plugin.
 
 ## What you get
 
@@ -31,12 +36,12 @@ After step 2, restart Claude Code to load the plugin.
 | `ortk-ocr` | Tesseract.js OCR helper |
 | `ortk-dashboard` | Local dashboard at `http://127.0.0.1:9876` showing daemon / MCP / org-roam health |
 
-Plus the Claude Code plugin under `plugins/org-roam-toolkit/`:
+Plus the agent plugin under `plugins/org-roam-toolkit/`, usable from Claude Code and Codex:
 
-- **9 slash commands** — `/note`, `/study`, `/deep_note`, `/reference`, `/ref-extract`, `/to-read`, `/read-history`, `/add-toolkit`, `/gen-commit-msg`
-- **5 skills** — `atomic-notes` (format spec), `org` (agenda + capture), `org-roam` (note management), `fetch` (web + OCR), `dashboard` (observability)
+- **9 Claude Code slash commands** — `/note`, `/study`, `/deep_note`, `/reference`, `/ref-extract`, `/to-read`, `/read-history`, `/add-toolkit`, `/gen-commit-msg`
+- **5 agent skills** — `atomic-notes` (format spec), `org` (agenda + capture), `org-roam` (note management), `fetch` (web + OCR), `dashboard` (observability)
 
-The slash commands are **Chinese-language and opinionated** — they encode a specific atomic-notes / Zettelkasten workflow. See `plugins/org-roam-toolkit/skills/atomic-notes/SKILL.md` for the format spec.
+The slash commands are **Claude-specific, Chinese-language, and opinionated** — they encode a specific atomic-notes / Zettelkasten workflow. See `plugins/org-roam-toolkit/skills/atomic-notes/SKILL.md` for the format spec.
 
 ## Runtime requirements
 
@@ -58,7 +63,7 @@ org-roam-toolkit/
 │   └── org-roam/                   # ortk-mcp — Rust MCP server backed by ortk-emacs-eval
 │
 ├── plugins/
-│   └── org-roam-toolkit/           # Claude Code plugin (commands + skills + .mcp.json)
+│   └── org-roam-toolkit/           # agent plugin (Claude commands + skills + .mcp.json + Codex manifest)
 │
 ├── Formula/
 │   └── org-roam-toolkit.rb         # Source-of-truth Homebrew formula (mirrored to iBenjamin/homebrew-tap)
@@ -66,7 +71,7 @@ org-roam-toolkit/
 └── docs/                           # developer documentation
 ```
 
-`packages/` are capability libraries — the implementations. `mcp-servers/` and `plugins/org-roam-toolkit/skills/` are adapters — they expose those capabilities to specific consumers (MCP clients, Claude Code).
+`packages/` are capability libraries — the implementations. `mcp-servers/` and `plugins/org-roam-toolkit/skills/` are adapters — they expose those capabilities to specific consumers (MCP clients, Claude Code, Codex).
 
 ## Development
 
@@ -78,8 +83,11 @@ make build            # tsc -b (all TS packages)
 make dashboard        # build + run server in foreground on $DASH_PORT (default 9876)
 make test             # vitest + eldev tests (if Eldev present)
 make lint             # vitest lint hooks + eldev lint
+make install-agents   # symlink/configure plugins/org-roam-toolkit for Claude Code + Codex (dev mode)
 make install-claude   # symlink plugins/org-roam-toolkit into ~/.claude/plugins/ (dev mode)
-make uninstall-claude # undo the above
+make install-codex    # symlink plugin and configure ~/.codex/config.toml (dev mode)
+make uninstall-claude # remove the Claude Code plugin symlink
+make uninstall-codex  # undo the Codex plugin symlink
 ```
 
 To test the formula locally without publishing a tag:
