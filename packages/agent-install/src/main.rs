@@ -43,8 +43,24 @@ fn options(cli: &Cli) -> anyhow::Result<InstallOptions> {
     let home = std::env::var_os("HOME")
         .map(PathBuf::from)
         .context("HOME is not set")?;
+    options_with_home(cli, home)
+}
+
+fn options_with_home(cli: &Cli, home: PathBuf) -> anyhow::Result<InstallOptions> {
+    if home.as_os_str().is_empty() {
+        anyhow::bail!("HOME is empty");
+    }
+
     let plugin_dir = match &cli.plugin_dir {
-        Some(path) => path.clone(),
+        Some(path) => {
+            let canonical = path
+                .canonicalize()
+                .with_context(|| format!("plugin directory does not exist: {}", path.display()))?;
+            if !canonical.is_dir() {
+                anyhow::bail!("plugin directory is not a directory: {}", path.display());
+            }
+            canonical
+        }
         None => default_plugin_dir()?,
     };
 
@@ -105,5 +121,56 @@ mod tests {
             cli.plugin_dir,
             Some(PathBuf::from("./plugins/org-roam-toolkit"))
         );
+    }
+
+    #[test]
+    fn options_canonicalizes_explicit_plugin_dir() {
+        let cli = Cli::try_parse_from([
+            "ortk-agent-install",
+            "all",
+            "--plugin-dir",
+            "../../plugins/org-roam-toolkit",
+        ])
+        .unwrap();
+
+        let opts = options_with_home(&cli, PathBuf::from("/tmp/home")).unwrap();
+
+        assert!(opts.plugin_dir.is_absolute());
+        assert_eq!(
+            opts.plugin_dir,
+            PathBuf::from("../../plugins/org-roam-toolkit")
+                .canonicalize()
+                .unwrap()
+        );
+    }
+
+    #[test]
+    fn options_rejects_missing_explicit_plugin_dir() {
+        let root = tempfile::TempDir::new().unwrap();
+        let missing = root.path().join("plugins/org-roam-toolkit");
+        let cli = Cli::try_parse_from([
+            "ortk-agent-install",
+            "all",
+            "--plugin-dir",
+            missing.to_str().unwrap(),
+        ])
+        .unwrap();
+
+        let err = options_with_home(&cli, PathBuf::from("/tmp/home"))
+            .unwrap_err()
+            .to_string();
+
+        assert!(err.contains("plugin directory"));
+    }
+
+    #[test]
+    fn options_rejects_empty_home() {
+        let cli = Cli::try_parse_from(["ortk-agent-install", "all"]).unwrap();
+
+        let err = options_with_home(&cli, PathBuf::new())
+            .unwrap_err()
+            .to_string();
+
+        assert!(err.contains("HOME is empty"));
     }
 }

@@ -287,6 +287,16 @@ fn write_backup(config_path: &Path, suffix: &str) -> anyhow::Result<PathBuf> {
 }
 
 pub fn install_codex(options: &InstallOptions) -> anyhow::Result<Vec<String>> {
+    let codex_dir = options.home.join(".codex");
+    let config_path = codex_dir.join("config.toml");
+    let planned_config = if config_path.exists() {
+        let current = fs::read_to_string(&config_path)
+            .with_context(|| format!("read {}", config_path.display()))?;
+        desired_codex_config(&current, options.force)?
+    } else {
+        Some(CODEX_MCP_BLOCK.to_string())
+    };
+
     let mut summary = Vec::new();
     let (_, link_line) = install_plugin_symlink(
         &options.home,
@@ -297,47 +307,41 @@ pub fn install_codex(options: &InstallOptions) -> anyhow::Result<Vec<String>> {
     )?;
     summary.push(link_line);
 
-    let codex_dir = options.home.join(".codex");
-    let config_path = codex_dir.join("config.toml");
-
-    if !config_path.exists() {
-        if options.dry_run {
+    match (config_path.exists(), planned_config) {
+        (false, Some(_)) if options.dry_run => {
             summary.push(format!(
                 "would create: {} with org-roam MCP server",
                 config_path.display()
             ));
-            return Ok(summary);
         }
-        fs::create_dir_all(&codex_dir)
-            .with_context(|| format!("create {}", codex_dir.display()))?;
-        fs::write(&config_path, CODEX_MCP_BLOCK)
-            .with_context(|| format!("write {}", config_path.display()))?;
-        summary.push(format!("created: {}", config_path.display()));
-        return Ok(summary);
+        (false, Some(next)) => {
+            fs::create_dir_all(&codex_dir)
+                .with_context(|| format!("create {}", codex_dir.display()))?;
+            fs::write(&config_path, next)
+                .with_context(|| format!("write {}", config_path.display()))?;
+            summary.push(format!("created: {}", config_path.display()));
+        }
+        (true, None) => {
+            summary.push(format!(
+                "already configured: {} has [mcp_servers.org-roam]",
+                config_path.display()
+            ));
+        }
+        (true, Some(_)) if options.dry_run => {
+            summary.push(format!(
+                "would update: {} with [mcp_servers.org-roam]",
+                config_path.display()
+            ));
+        }
+        (true, Some(next)) => {
+            let backup = write_backup(&config_path, &options.backup_suffix)?;
+            fs::write(&config_path, next)
+                .with_context(|| format!("write {}", config_path.display()))?;
+            summary.push(format!("backup: {}", backup.display()));
+            summary.push(format!("updated: {}", config_path.display()));
+        }
+        (false, None) => unreachable!("missing config always needs creation"),
     }
-
-    let current = fs::read_to_string(&config_path)
-        .with_context(|| format!("read {}", config_path.display()))?;
-    let Some(next) = desired_codex_config(&current, options.force)? else {
-        summary.push(format!(
-            "already configured: {} has [mcp_servers.org-roam]",
-            config_path.display()
-        ));
-        return Ok(summary);
-    };
-
-    if options.dry_run {
-        summary.push(format!(
-            "would update: {} with [mcp_servers.org-roam]",
-            config_path.display()
-        ));
-        return Ok(summary);
-    }
-
-    let backup = write_backup(&config_path, &options.backup_suffix)?;
-    fs::write(&config_path, next).with_context(|| format!("write {}", config_path.display()))?;
-    summary.push(format!("backup: {}", backup.display()));
-    summary.push(format!("updated: {}", config_path.display()));
     Ok(summary)
 }
 
@@ -566,6 +570,25 @@ mod tests {
             fs::read_to_string(&config_path).unwrap(),
             "[mcp_servers.org-roam]\ncommand = \"other\"\n",
         );
+    }
+
+    #[test]
+    fn codex_install_does_not_create_symlink_when_config_conflicts() {
+        let root = TempDir::new().unwrap();
+        let plugin = temp_plugin(&root);
+        let opts = options(root.path().join("home"), plugin);
+        let config_path = opts.home.join(".codex/config.toml");
+        fs::create_dir_all(config_path.parent().unwrap()).unwrap();
+        fs::write(
+            &config_path,
+            "[mcp_servers.org-roam]\ncommand = \"other\"\n",
+        )
+        .unwrap();
+
+        let err = install_codex(&opts).unwrap_err().to_string();
+
+        assert!(err.contains("conflicting"));
+        assert!(!opts.home.join(".codex/plugins/org-roam-toolkit").exists());
     }
 
     #[test]
