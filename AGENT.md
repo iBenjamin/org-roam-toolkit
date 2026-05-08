@@ -4,6 +4,24 @@ Project-specific instructions for AI coding assistants. Overrides any
 conflicting rules in global / user-level config (e.g. `~/.claude/CLAUDE.md`,
 `~/.config/aider/conf.yml`, etc.).
 
+## Commit messages
+
+All commits in this repository must use Conventional Commits / semantic commit
+message format:
+
+    <type>(optional-scope): <summary>
+
+Examples:
+
+    feat: add org-roam capture helper
+    fix(mcp): handle daemon startup failures
+    refactor: rewrite org-roam MCP server in Rust
+    docs: clarify Homebrew install flow
+
+Use the smallest accurate type (`feat`, `fix`, `refactor`, `docs`, `test`,
+`build`, `chore`, etc.). Keep the summary imperative, lowercase after the type
+unless it names a proper noun, and avoid trailing punctuation.
+
 ## Commit attribution
 
 For this project, AI co-authorship is **explicitly allowed** in commit
