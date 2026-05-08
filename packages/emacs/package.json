@@ -1,6 +1,6 @@
 {
   "name": "@org-roam-toolkit/emacs",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Emacsclient wrapper, shared elisp packages, and TypeScript helpers",
   "license": "MIT",
   "type": "module",

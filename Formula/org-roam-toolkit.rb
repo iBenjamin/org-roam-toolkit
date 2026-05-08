@@ -17,8 +17,8 @@
 class OrgRoamToolkit < Formula
   desc "MCP server and Claude Code plugin for Emacs org-roam"
   homepage "https://github.com/iBenjamin/org-roam-toolkit"
-  url "https://github.com/iBenjamin/org-roam-toolkit/archive/refs/tags/v0.2.2.tar.gz"
-  sha256 "068506d70df5966572fa5f854804b82b72ce8305706e178b8048dc75993007e5"
+  url "https://github.com/iBenjamin/org-roam-toolkit/archive/refs/tags/v0.2.3.tar.gz"
+  sha256 "0000000000000000000000000000000000000000000000000000000000000000"
   license "MIT"
   head "https://github.com/iBenjamin/org-roam-toolkit.git", branch: "main"
 
@@ -75,9 +75,11 @@ class OrgRoamToolkit < Formula
         ortk-agent-install claude
         ortk-agent-install codex
 
-      The installer links the plugin into ~/.claude/plugins and ~/.codex/plugins.
-      For Codex, it also adds [mcp_servers.org-roam] to ~/.codex/config.toml
-      backing up an existing config before changing it.
+      The installer links the plugin into ~/.claude/plugins for Claude Code.
+      For Codex, it copies the plugin into ~/.codex/plugins/cache, enables
+      [plugins."org-roam-toolkit@org-roam-toolkit"], and adds
+      [mcp_servers.org-roam] to ~/.codex/config.toml, backing up an existing
+      config before changing it.
 
       Restart Claude Code or Codex to load the plugin.
 
@@ -102,7 +104,7 @@ class OrgRoamToolkit < Formula
     assert_match version.to_s, shell_output("#{bin}/ortk-dashboard --version")
     assert_match "ortk-agent-install", shell_output("#{bin}/ortk-agent-install --help")
     with_env(HOME: testpath) do
-      assert_match "would link",
+      assert_match "would cache",
                    shell_output("#{bin}/ortk-agent-install all --dry-run --plugin-dir " \
                                 "#{opt_libexec}/plugins/org-roam-toolkit")
     end

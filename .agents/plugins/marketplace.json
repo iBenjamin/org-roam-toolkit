@@ -1,0 +1,20 @@
+{
+  "name": "org-roam-toolkit",
+  "interface": {
+    "displayName": "org-roam toolkit"
+  },
+  "plugins": [
+    {
+      "name": "org-roam-toolkit",
+      "source": {
+        "source": "local",
+        "path": "./plugins/org-roam-toolkit"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

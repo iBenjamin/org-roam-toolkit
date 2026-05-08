@@ -7,7 +7,7 @@ End-to-end org-roam workflows for Claude Code and Codex.
 - **Claude Code commands** (`commands/`) — 9 slash commands: `/note`, `/study`, `/deep_note`, `/reference`, `/ref-extract`, `/to-read`, `/read-history`, `/add-toolkit`, `/gen-commit-msg`
 - **Agent skills** (`skills/`) — `atomic-notes` (format spec), `org` (agenda + capture), `org-roam` (note management), `fetch` (playwright + OCR), `dashboard` (observability)
 - **Claude MCP server registration** (`.mcp.json`) — registers the `org-roam` MCP server backed by the Homebrew-installed `ortk-mcp` bin
-- **Codex plugin manifest** (`.codex-plugin/plugin.json`) — points Codex at `./skills/`; `ortk-agent-install codex` writes the MCP registration into `~/.codex/config.toml`
+- **Codex plugin manifest** (`.codex-plugin/plugin.json`) — points Codex at `./skills/`; `ortk-agent-install codex` copies the plugin into Codex's cache, enables it in `~/.codex/config.toml`, and writes the MCP registration
 
 ## Runtime requirements
 

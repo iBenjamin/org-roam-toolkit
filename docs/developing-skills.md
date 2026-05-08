@@ -49,7 +49,9 @@ Loading is automatic — `ortk-emacs-eval --pkg=<name>` finds it by directory co
 3. (Optional) `mkdir scripts/` with one-line bash wrappers that pre-apply common flags. Wrappers should be plain `exec ortk-... "$@"` — no path-traversal tricks.
 4. `chmod +x plugins/org-roam-toolkit/skills/<name>/scripts/<short-name>`
 
-A skill should not contain `.ts` or `.el` files. Agents discover the whole `plugins/org-roam-toolkit/` directory after it is linked into their plugin directories: use `make install-claude`, `make install-codex`, or `make install-agents` in dev, and use `ortk-agent-install claude`, `ortk-agent-install codex`, or `ortk-agent-install all` after a Homebrew install.
+A skill should not contain `.ts` or `.el` files. Agents discover the whole `plugins/org-roam-toolkit/` directory after it is installed into their plugin locations: use `make install-claude`, `make install-codex`, or `make install-agents` in dev, and use `ortk-agent-install claude`, `ortk-agent-install codex`, or `ortk-agent-install all` after a Homebrew install.
+
+Codex does not discover top-level `~/.codex/plugins/<name>` links. The installer copies the plugin into `~/.codex/plugins/cache/org-roam-toolkit/org-roam-toolkit/local` and enables `[plugins."org-roam-toolkit@org-roam-toolkit"]` in `~/.codex/config.toml`.
 
 ## Adding a new web site handler
 

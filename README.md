@@ -22,7 +22,7 @@ ortk-agent-install codex
 brew services start org-roam-toolkit       # http://127.0.0.1:9876
 ```
 
-`ortk-agent-install` links the selected agent plugin directories into place. For Codex, it also adds `[mcp_servers.org-roam]` to `~/.codex/config.toml`; when an existing Codex config would change, the installer writes a timestamped backup first.
+`ortk-agent-install` links the Claude plugin into `~/.claude/plugins`. For Codex, it copies the plugin into Codex's plugin cache, enables `[plugins."org-roam-toolkit@org-roam-toolkit"]`, and adds `[mcp_servers.org-roam]` to `~/.codex/config.toml`; when an existing Codex config would change, the installer writes a timestamped backup first.
 
 After step 2, restart Claude Code or Codex to load the plugin.
 
@@ -65,6 +65,8 @@ org-roam-toolkit/
 ├── plugins/
 │   └── org-roam-toolkit/           # agent plugin (Claude commands + skills + Claude .mcp.json + Codex manifest)
 │
+├── .agents/plugins/                # Codex marketplace metadata for this repo
+│
 ├── Formula/
 │   └── org-roam-toolkit.rb         # Source-of-truth Homebrew formula (mirrored to iBenjamin/homebrew-tap)
 │
@@ -83,11 +85,11 @@ make build            # tsc -b + cargo build --release
 make dashboard        # build + run server in foreground on $DASH_PORT (default 9876)
 make test             # vitest + cargo test + eldev tests (if Eldev present)
 make lint             # npm lint hooks + cargo clippy + eldev lint
-make install-agents   # symlink/configure plugins/org-roam-toolkit for Claude Code + Codex (dev mode)
+make install-agents   # install/configure plugins/org-roam-toolkit for Claude Code + Codex (dev mode)
 make install-claude   # symlink plugins/org-roam-toolkit into ~/.claude/plugins/ (dev mode)
-make install-codex    # symlink plugin and configure ~/.codex/config.toml (dev mode)
+make install-codex    # cache plugin and configure ~/.codex/config.toml (dev mode)
 make uninstall-claude # remove the Claude Code plugin symlink
-make uninstall-codex  # undo the Codex plugin symlink
+make uninstall-codex  # remove the Codex plugin cache copy
 ```
 
 To test the formula locally without publishing a tag:

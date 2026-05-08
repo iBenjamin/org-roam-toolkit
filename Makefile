@@ -15,11 +15,11 @@ help:
 	@echo "  test               npm test + cargo test + (eldev test if Eldev present)"
 	@echo "  lint               npm run lint + cargo clippy + eldev lint"
 	@echo "  clean              tsc -b --clean + cargo clean"
-	@echo "  install-agents     install Claude + Codex plugin symlinks/config (dev mode)"
+	@echo "  install-agents     install Claude + Codex plugin/config (dev mode)"
 	@echo "  install-claude     symlink the plugin into ~/.claude/plugins/ (dev mode)"
-	@echo "  install-codex      symlink plugin into ~/.codex/plugins/ and add org-roam MCP"
+	@echo "  install-codex      cache plugin into ~/.codex/plugins/cache and add org-roam MCP"
 	@echo "  uninstall-claude   remove the plugin symlink"
-	@echo "  uninstall-codex    remove the Codex plugin symlink"
+	@echo "  uninstall-codex    remove the Codex plugin cache copy"
 	@echo "  elisp-test/-lint   eldev test/lint in packages/emacs"
 	@echo ""
 	@echo "End-user install (after publishing):"
@@ -87,15 +87,16 @@ elisp-lint:
 
 # ---- agent plugin install helpers -------------------------------------------
 #
-# Development-only convenience: symlink the plugin directory into agent plugin
-# directories and configure Codex MCP. End users should run ortk-agent-install
-# from the Homebrew formula.
+# Development-only convenience: install the plugin into agent plugin locations
+# and configure Codex MCP. End users should run ortk-agent-install from the
+# Homebrew formula.
 #
 # `uninstall-claude` only removes the symlink if it points back to this repo.
 
 CLAUDE_PLUGINS_DIR := $(HOME)/.claude/plugins
 PLUGIN_NAME        := org-roam-toolkit
 PLUGIN_DIR         := $(REPO_ROOT)/plugins/$(PLUGIN_NAME)
+CODEX_CACHE_DIR    := $(HOME)/.codex/plugins/cache/$(PLUGIN_NAME)/$(PLUGIN_NAME)/local
 
 install-claude:
 	cargo run --manifest-path packages/agent-install/Cargo.toml -- claude --plugin-dir "$(PLUGIN_DIR)"
@@ -116,11 +117,16 @@ uninstall-claude:
 	fi
 
 uninstall-codex:
-	@target="$(HOME)/.codex/plugins/$(PLUGIN_NAME)"; \
-	if [ -L "$$target" ] && readlink "$$target" | grep -qF "$(REPO_ROOT)/"; then \
+	@cache="$(CODEX_CACHE_DIR)"; \
+	target="$(HOME)/.codex/plugins/$(PLUGIN_NAME)"; \
+	if [ -d "$$cache" ]; then \
+		rm -rf "$$cache"; \
+		echo "removed $$cache"; \
+		echo "left ~/.codex/config.toml unchanged"; \
+	elif [ -L "$$target" ] && readlink "$$target" | grep -qF "$(REPO_ROOT)/"; then \
 		rm "$$target"; \
-		echo "removed $$target"; \
+		echo "removed legacy symlink $$target"; \
 		echo "left ~/.codex/config.toml unchanged"; \
 	else \
-		echo "no dev symlink at $$target — nothing to do"; \
+		echo "no dev Codex cache at $$cache — nothing to do"; \
 	fi

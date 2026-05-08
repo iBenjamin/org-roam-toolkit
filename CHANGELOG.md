@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.3] - 2026-05-09
+
+### Fixed
+- `ortk-agent-install codex` now installs the plugin into Codex's plugin cache and enables `[plugins."org-roam-toolkit@org-roam-toolkit"]`, which matches Codex's actual plugin discovery path after restart.
+- Added repo-level Codex marketplace metadata for `codex plugin marketplace add <repo>`.
+
 ## [0.2.2] - 2026-05-09
 
 ### Fixed

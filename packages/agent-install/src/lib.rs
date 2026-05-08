@@ -6,6 +6,10 @@ use std::os::unix::fs::symlink;
 use std::path::{Path, PathBuf};
 
 const PLUGIN_NAME: &str = "org-roam-toolkit";
+const CODEX_PLUGIN_TABLE: &str = "plugins.\"org-roam-toolkit@org-roam-toolkit\"";
+const CODEX_PLUGIN_BLOCK: &str =
+    "[plugins.\"org-roam-toolkit@org-roam-toolkit\"]\nenabled = true\n";
+const CODEX_CACHE_REVISION: &str = "local";
 const CODEX_MCP_BLOCK: &str = "[mcp_servers.org-roam]\ncommand = \"ortk-mcp\"\n";
 
 #[derive(Clone, Debug)]
@@ -40,6 +44,14 @@ enum CodexConfigRollback {
 
 fn plugin_link_path(home: &Path, agent_dir: &str) -> PathBuf {
     home.join(agent_dir).join("plugins").join(PLUGIN_NAME)
+}
+
+fn codex_plugin_cache_path(home: &Path) -> PathBuf {
+    home.join(".codex")
+        .join("plugins/cache")
+        .join(PLUGIN_NAME)
+        .join(PLUGIN_NAME)
+        .join(CODEX_CACHE_REVISION)
 }
 
 fn same_link_target(link: &Path, plugin_dir: &Path) -> bool {
@@ -373,6 +385,66 @@ fn has_key(table: &str, key: &str) -> bool {
     })
 }
 
+fn bool_value_for_key(table: &str, key: &str) -> Option<bool> {
+    for line in table.lines() {
+        let uncommented = strip_inline_comment(line);
+        let trimmed = uncommented.trim();
+        if let Some((lhs, rhs)) = trimmed.split_once('=') {
+            if lhs.trim() == key {
+                return match rhs.trim() {
+                    "true" => Some(true),
+                    "false" => Some(false),
+                    _ => None,
+                };
+            }
+        }
+    }
+    None
+}
+
+fn upsert_table_key(content: &str, range: (usize, usize), key: &str, value: &str) -> String {
+    let table = table_body(content, range);
+    let mut next_table = String::new();
+    let mut replaced = false;
+
+    for line in table.split_inclusive('\n') {
+        let uncommented = strip_inline_comment(line);
+        let trimmed = uncommented.trim();
+        if !replaced
+            && trimmed
+                .split_once('=')
+                .map(|(lhs, _)| lhs.trim() == key)
+                .unwrap_or(false)
+        {
+            let indent: String = line.chars().take_while(|ch| ch.is_whitespace()).collect();
+            next_table.push_str(&indent);
+            next_table.push_str(key);
+            next_table.push_str(" = ");
+            next_table.push_str(value);
+            if line.ends_with('\n') {
+                next_table.push('\n');
+            }
+            replaced = true;
+        } else {
+            next_table.push_str(line);
+        }
+    }
+
+    if !replaced {
+        if let Some(header_end) = next_table.find('\n') {
+            next_table.insert_str(header_end + 1, &format!("{key} = {value}\n"));
+        } else {
+            next_table.push('\n');
+            next_table.push_str(key);
+            next_table.push_str(" = ");
+            next_table.push_str(value);
+            next_table.push('\n');
+        }
+    }
+
+    replace_range(content, range, &next_table)
+}
+
 fn append_block(mut content: String, block: &str) -> String {
     if !content.is_empty() && !content.ends_with('\n') {
         content.push('\n');
@@ -398,7 +470,20 @@ fn replace_range(content: &str, range: (usize, usize), block: &str) -> String {
     next
 }
 
-fn desired_codex_config(content: &str, force: bool) -> anyhow::Result<Option<String>> {
+fn desired_codex_plugin_config(content: &str) -> Option<String> {
+    let Some(range) = table_range(content, CODEX_PLUGIN_TABLE) else {
+        return Some(append_block(content.to_string(), CODEX_PLUGIN_BLOCK));
+    };
+
+    let body = table_body(content, range);
+    if bool_value_for_key(body, "enabled") == Some(true) {
+        return None;
+    }
+
+    Some(upsert_table_key(content, range, "enabled", "true"))
+}
+
+fn desired_codex_mcp_config(content: &str, force: bool) -> anyhow::Result<Option<String>> {
     let Some(range) = table_range(content, "mcp_servers.org-roam") else {
         return Ok(Some(append_block(content.to_string(), CODEX_MCP_BLOCK)));
     };
@@ -415,6 +500,23 @@ fn desired_codex_config(content: &str, force: bool) -> anyhow::Result<Option<Str
     }
 
     Ok(Some(replace_range(content, range, CODEX_MCP_BLOCK)))
+}
+
+fn desired_codex_config(content: &str, force: bool) -> anyhow::Result<Option<String>> {
+    let mut next = content.to_string();
+    let mut changed = false;
+
+    if let Some(plugin_config) = desired_codex_plugin_config(&next) {
+        next = plugin_config;
+        changed = true;
+    }
+
+    if let Some(mcp_config) = desired_codex_mcp_config(&next, force)? {
+        next = mcp_config;
+        changed = true;
+    }
+
+    Ok(changed.then_some(next))
 }
 
 fn write_backup(config_path: &Path, suffix: &str) -> anyhow::Result<PathBuf> {
@@ -470,13 +572,13 @@ fn rollback_codex_config(rollback: &CodexConfigRollback, suffix: &str) -> anyhow
 
 fn planned_codex_config(options: &InstallOptions) -> anyhow::Result<(PathBuf, Option<String>)> {
     let config_path = options.home.join(".codex/config.toml");
-    let planned_config = if config_path.exists() {
-        let current = fs::read_to_string(&config_path)
-            .with_context(|| format!("read {}", config_path.display()))?;
-        desired_codex_config(&current, options.force)?
+    let current = if config_path.exists() {
+        fs::read_to_string(&config_path)
+            .with_context(|| format!("read {}", config_path.display()))?
     } else {
-        Some(CODEX_MCP_BLOCK.to_string())
+        String::new()
     };
+    let planned_config = desired_codex_config(&current, options.force)?;
     Ok((config_path, planned_config))
 }
 
@@ -505,16 +607,199 @@ fn preflight_plugin_symlink(
     Ok(())
 }
 
-fn preflight_codex(options: &InstallOptions) -> anyhow::Result<()> {
-    preflight_plugin_symlink(&options.home, ".codex", &options.plugin_dir, options.force)?;
-    planned_codex_config(options)?;
+fn preflight_codex_cache(options: &InstallOptions) -> anyhow::Result<()> {
+    let target = codex_plugin_cache_path(&options.home);
+    let Some(parent) = target.parent() else {
+        bail!("Codex plugin cache path has no parent");
+    };
+
+    if parent.exists() {
+        let meta = fs::symlink_metadata(parent)
+            .with_context(|| format!("inspect {}", parent.display()))?;
+        if !meta.is_dir() {
+            bail!("{} exists and is not a directory", parent.display());
+        }
+    }
+
+    if target.exists() || target.is_symlink() {
+        let meta = fs::symlink_metadata(&target)
+            .with_context(|| format!("inspect {}", target.display()))?;
+        if !meta.is_dir() && !options.force {
+            bail!(
+                "{} exists and is not a directory; pass --force to replace it",
+                target.display()
+            );
+        }
+    }
+
     Ok(())
+}
+
+fn preflight_codex(options: &InstallOptions) -> anyhow::Result<()> {
+    planned_codex_config(options)?;
+    preflight_codex_cache(options)?;
+    Ok(())
+}
+
+fn remove_path(path: &Path) -> anyhow::Result<()> {
+    let meta = fs::symlink_metadata(path).with_context(|| format!("inspect {}", path.display()))?;
+    if meta.is_dir() {
+        fs::remove_dir_all(path).with_context(|| format!("remove {}", path.display()))?;
+    } else {
+        fs::remove_file(path).with_context(|| format!("remove {}", path.display()))?;
+    }
+    Ok(())
+}
+
+fn copy_dir_recursive(src: &Path, dst: &Path) -> anyhow::Result<()> {
+    let meta = fs::symlink_metadata(src).with_context(|| format!("inspect {}", src.display()))?;
+    let file_type = meta.file_type();
+
+    if file_type.is_symlink() {
+        let link_target = fs::read_link(src).with_context(|| format!("read {}", src.display()))?;
+        symlink(link_target, dst).with_context(|| format!("link {}", dst.display()))?;
+        return Ok(());
+    }
+
+    if meta.is_dir() {
+        fs::create_dir_all(dst).with_context(|| format!("create {}", dst.display()))?;
+        fs::set_permissions(dst, meta.permissions())
+            .with_context(|| format!("set permissions on {}", dst.display()))?;
+        for entry in fs::read_dir(src).with_context(|| format!("read {}", src.display()))? {
+            let entry = entry.with_context(|| format!("read entry in {}", src.display()))?;
+            copy_dir_recursive(&entry.path(), &dst.join(entry.file_name()))?;
+        }
+        return Ok(());
+    }
+
+    if meta.is_file() {
+        fs::copy(src, dst)
+            .with_context(|| format!("copy {} to {}", src.display(), dst.display()))?;
+        fs::set_permissions(dst, meta.permissions())
+            .with_context(|| format!("set permissions on {}", dst.display()))?;
+        return Ok(());
+    }
+
+    bail!(
+        "unsupported file type in plugin directory: {}",
+        src.display()
+    );
+}
+
+fn install_codex_plugin_cache(
+    options: &InstallOptions,
+) -> anyhow::Result<(InstallOutcome, String)> {
+    let target = codex_plugin_cache_path(&options.home);
+    let parent = target
+        .parent()
+        .context("Codex plugin cache path has no parent")?;
+    let exists = target.exists() || target.is_symlink();
+
+    if exists {
+        let meta = fs::symlink_metadata(&target)
+            .with_context(|| format!("inspect {}", target.display()))?;
+        if !meta.is_dir() && !options.force {
+            bail!(
+                "{} exists and is not a directory; pass --force to replace it",
+                target.display()
+            );
+        }
+    }
+
+    if options.dry_run {
+        let outcome = if exists {
+            InstallOutcome::WouldReplace
+        } else {
+            InstallOutcome::WouldCreate
+        };
+        let action = if exists {
+            "would update"
+        } else {
+            "would cache"
+        };
+        return Ok((
+            outcome,
+            format!(
+                "{action}: {} from {}",
+                target.display(),
+                options.plugin_dir.display()
+            ),
+        ));
+    }
+
+    fs::create_dir_all(parent).with_context(|| format!("create {}", parent.display()))?;
+    let tmp = parent.join(format!(
+        ".{CODEX_CACHE_REVISION}.tmp-{}-{}",
+        std::process::id(),
+        options.backup_suffix
+    ));
+    let backup = parent.join(format!(
+        ".{CODEX_CACHE_REVISION}.bak-{}-{}",
+        std::process::id(),
+        options.backup_suffix
+    ));
+
+    if tmp.exists() || tmp.is_symlink() {
+        remove_path(&tmp)?;
+    }
+    if backup.exists() || backup.is_symlink() {
+        remove_path(&backup)?;
+    }
+
+    let copy_result = (|| -> anyhow::Result<InstallOutcome> {
+        copy_dir_recursive(&options.plugin_dir, &tmp)?;
+        if exists {
+            fs::rename(&target, &backup)
+                .with_context(|| format!("move {} to {}", target.display(), backup.display()))?;
+            if let Err(err) = fs::rename(&tmp, &target)
+                .with_context(|| format!("move {} to {}", tmp.display(), target.display()))
+            {
+                if let Err(rollback_err) = fs::rename(&backup, &target).with_context(|| {
+                    format!("restore {} from {}", target.display(), backup.display())
+                }) {
+                    bail!(
+                        "failed to update Codex plugin cache: {err:#}; additionally failed to restore previous cache: {rollback_err:#}"
+                    );
+                }
+                return Err(err)
+                    .context("failed to update Codex plugin cache; restored previous cache");
+            }
+            remove_path(&backup)?;
+            Ok(InstallOutcome::Replaced)
+        } else {
+            fs::rename(&tmp, &target)
+                .with_context(|| format!("move {} to {}", tmp.display(), target.display()))?;
+            Ok(InstallOutcome::Created)
+        }
+    })();
+
+    if copy_result.is_err() && (tmp.exists() || tmp.is_symlink()) {
+        let _ = remove_path(&tmp);
+    }
+    if copy_result.is_err() && (backup.exists() || backup.is_symlink()) && !target.exists() {
+        let _ = fs::rename(&backup, &target);
+    }
+
+    let outcome = copy_result?;
+    let action = if outcome == InstallOutcome::Replaced {
+        "updated"
+    } else {
+        "cached"
+    };
+    Ok((
+        outcome,
+        format!(
+            "{action}: {} from {}",
+            target.display(),
+            options.plugin_dir.display()
+        ),
+    ))
 }
 
 pub fn install_codex(options: &InstallOptions) -> anyhow::Result<Vec<String>> {
     let codex_dir = options.home.join(".codex");
     let (config_path, planned_config) = planned_codex_config(options)?;
-    preflight_plugin_symlink(&options.home, ".codex", &options.plugin_dir, options.force)?;
+    preflight_codex_cache(options)?;
 
     let mut summary = Vec::new();
     let mut config_rollback = CodexConfigRollback::None;
@@ -522,7 +807,7 @@ pub fn install_codex(options: &InstallOptions) -> anyhow::Result<Vec<String>> {
     match (config_path.exists(), planned_config) {
         (false, Some(_)) if options.dry_run => {
             summary.push(format!(
-                "would create: {} with org-roam MCP server",
+                "would create: {} with org-roam plugin and MCP server",
                 config_path.display()
             ));
         }
@@ -535,14 +820,16 @@ pub fn install_codex(options: &InstallOptions) -> anyhow::Result<Vec<String>> {
         }
         (true, None) => {
             summary.push(format!(
-                "already configured: {} has [mcp_servers.org-roam]",
-                config_path.display()
+                "already configured: {} has [{}] and [mcp_servers.org-roam]",
+                config_path.display(),
+                CODEX_PLUGIN_TABLE
             ));
         }
         (true, Some(_)) if options.dry_run => {
             summary.push(format!(
-                "would update: {} with [mcp_servers.org-roam]",
-                config_path.display()
+                "would update: {} with [{}] and [mcp_servers.org-roam]",
+                config_path.display(),
+                CODEX_PLUGIN_TABLE
             ));
         }
         (true, Some(next)) => {
@@ -558,30 +845,24 @@ pub fn install_codex(options: &InstallOptions) -> anyhow::Result<Vec<String>> {
         (false, None) => unreachable!("missing config always needs creation"),
     }
 
-    let link_result = install_plugin_symlink(
-        &options.home,
-        ".codex",
-        &options.plugin_dir,
-        options.dry_run,
-        options.force,
-    );
-    let (_, link_line) = match link_result {
-        Ok(link) => link,
+    let cache_result = install_codex_plugin_cache(options);
+    let (_, cache_line) = match cache_result {
+        Ok(cache) => cache,
         Err(err) => match rollback_codex_config(&config_rollback, &options.backup_suffix) {
             Ok(true) => {
                 return Err(err)
-                    .context("failed to install Codex plugin link; rolled back Codex config");
+                    .context("failed to install Codex plugin cache; rolled back Codex config");
             }
             Ok(false) => return Err(err),
             Err(rollback_err) => {
                 bail!(
-                    "failed to install Codex plugin link: {err:#}; \
+                    "failed to install Codex plugin cache: {err:#}; \
                          additionally failed to roll back Codex config: {rollback_err:#}"
                 );
             }
         },
     };
-    summary.insert(0, link_line);
+    summary.insert(0, cache_line);
 
     Ok(summary)
 }
@@ -683,6 +964,24 @@ mod tests {
     }
 
     #[test]
+    fn codex_install_caches_and_enables_plugin_for_discovery() {
+        let root = TempDir::new().unwrap();
+        let plugin = temp_plugin(&root);
+        let opts = options(root.path().join("home"), plugin);
+
+        install_codex(&opts).unwrap();
+
+        let cache = opts
+            .home
+            .join(".codex/plugins/cache/org-roam-toolkit/org-roam-toolkit/local");
+        assert!(cache.join("marker").exists());
+        assert!(!cache.is_symlink());
+        let config = fs::read_to_string(opts.home.join(".codex/config.toml")).unwrap();
+        assert!(config.contains("[plugins.\"org-roam-toolkit@org-roam-toolkit\"]\nenabled = true"));
+        assert!(!opts.home.join(".codex/plugins/org-roam-toolkit").exists());
+    }
+
+    #[test]
     fn codex_install_appends_mcp_without_touching_existing_content() {
         let root = TempDir::new().unwrap();
         let plugin = temp_plugin(&root);
@@ -700,6 +999,7 @@ mod tests {
         let config = fs::read_to_string(&config_path).unwrap();
         assert!(config.starts_with("model = \"gpt-5.5\""));
         assert!(config.contains("[mcp_servers.gitnexus]\ncommand = \"gitnexus\""));
+        assert!(config.contains("[plugins.\"org-roam-toolkit@org-roam-toolkit\"]\nenabled = true"));
         assert!(config.contains("[mcp_servers.org-roam]\ncommand = \"ortk-mcp\""));
         assert!(opts
             .home
@@ -722,17 +1022,14 @@ mod tests {
 
         let summary = install_codex(&opts).unwrap();
 
-        assert_eq!(
-            fs::read_to_string(&config_path).unwrap(),
-            "[mcp_servers.org-roam]\ncommand = \"ortk-mcp\"\n",
-        );
-        assert!(!opts
+        let config = fs::read_to_string(&config_path).unwrap();
+        assert!(config.contains("[mcp_servers.org-roam]\ncommand = \"ortk-mcp\""));
+        assert!(config.contains("[plugins.\"org-roam-toolkit@org-roam-toolkit\"]\nenabled = true"));
+        assert!(opts
             .home
             .join(".codex/config.toml.bak-20260508220000")
             .exists());
-        assert!(summary
-            .iter()
-            .any(|line| line.contains("already configured")));
+        assert!(summary.iter().any(|line| line.contains("updated")));
     }
 
     #[test]
@@ -750,17 +1047,14 @@ mod tests {
 
         let summary = install_codex(&opts).unwrap();
 
-        assert_eq!(
-            fs::read_to_string(&config_path).unwrap(),
-            "[mcp_servers.org-roam] # org-roam server\ncommand = \"ortk-mcp\"\n",
-        );
-        assert!(!opts
+        let config = fs::read_to_string(&config_path).unwrap();
+        assert!(config.contains("[mcp_servers.org-roam] # org-roam server\ncommand = \"ortk-mcp\""));
+        assert!(config.contains("[plugins.\"org-roam-toolkit@org-roam-toolkit\"]\nenabled = true"));
+        assert!(opts
             .home
             .join(".codex/config.toml.bak-20260508220000")
             .exists());
-        assert!(summary
-            .iter()
-            .any(|line| line.contains("already configured")));
+        assert!(summary.iter().any(|line| line.contains("updated")));
     }
 
     #[test]
@@ -778,17 +1072,16 @@ mod tests {
 
         let summary = install_codex(&opts).unwrap();
 
-        assert_eq!(
-            fs::read_to_string(&config_path).unwrap(),
-            "[mcp_servers.org-roam]\ncommand = \"ortk-mcp\" # installed by org-roam-toolkit\n",
-        );
-        assert!(!opts
+        let config = fs::read_to_string(&config_path).unwrap();
+        assert!(config.contains(
+            "[mcp_servers.org-roam]\ncommand = \"ortk-mcp\" # installed by org-roam-toolkit"
+        ));
+        assert!(config.contains("[plugins.\"org-roam-toolkit@org-roam-toolkit\"]\nenabled = true"));
+        assert!(opts
             .home
             .join(".codex/config.toml.bak-20260508220000")
             .exists());
-        assert!(summary
-            .iter()
-            .any(|line| line.contains("already configured")));
+        assert!(summary.iter().any(|line| line.contains("updated")));
     }
 
     #[test]
@@ -806,9 +1099,34 @@ mod tests {
 
         let summary = install_codex(&opts).unwrap();
 
+        let config = fs::read_to_string(&config_path).unwrap();
+        assert!(config.contains("[mcp_servers.org-roam]\ncommand = 'ortk-mcp'"));
+        assert!(config.contains("[plugins.\"org-roam-toolkit@org-roam-toolkit\"]\nenabled = true"));
+        assert!(opts
+            .home
+            .join(".codex/config.toml.bak-20260508220000")
+            .exists());
+        assert!(summary.iter().any(|line| line.contains("updated")));
+    }
+
+    #[test]
+    fn codex_install_is_idempotent_when_plugin_and_mcp_are_already_configured() {
+        let root = TempDir::new().unwrap();
+        let plugin = temp_plugin(&root);
+        let opts = options(root.path().join("home"), plugin);
+        let config_path = opts.home.join(".codex/config.toml");
+        fs::create_dir_all(config_path.parent().unwrap()).unwrap();
+        fs::write(
+            &config_path,
+            "[plugins.\"org-roam-toolkit@org-roam-toolkit\"]\nenabled = true\n\n[mcp_servers.org-roam]\ncommand = \"ortk-mcp\"\n",
+        )
+        .unwrap();
+
+        let summary = install_codex(&opts).unwrap();
+
         assert_eq!(
             fs::read_to_string(&config_path).unwrap(),
-            "[mcp_servers.org-roam]\ncommand = 'ortk-mcp'\n",
+            "[plugins.\"org-roam-toolkit@org-roam-toolkit\"]\nenabled = true\n\n[mcp_servers.org-roam]\ncommand = \"ortk-mcp\"\n",
         );
         assert!(!opts
             .home
@@ -842,7 +1160,7 @@ mod tests {
     }
 
     #[test]
-    fn codex_install_does_not_create_symlink_when_config_conflicts() {
+    fn codex_install_does_not_cache_plugin_when_config_conflicts() {
         let root = TempDir::new().unwrap();
         let plugin = temp_plugin(&root);
         let opts = options(root.path().join("home"), plugin);
@@ -857,7 +1175,7 @@ mod tests {
         let err = install_codex(&opts).unwrap_err().to_string();
 
         assert!(err.contains("conflicting"));
-        assert!(!opts.home.join(".codex/plugins/org-roam-toolkit").exists());
+        assert!(!codex_plugin_cache_path(&opts.home).exists());
     }
 
     #[test]
@@ -878,6 +1196,7 @@ mod tests {
 
         let config = fs::read_to_string(&config_path).unwrap();
         assert!(config.contains("model = \"gpt-5.5\""));
+        assert!(config.contains("[plugins.\"org-roam-toolkit@org-roam-toolkit\"]\nenabled = true"));
         assert!(config.contains("[mcp_servers.org-roam]\ncommand = \"ortk-mcp\""));
         assert!(!config.contains("args = [\"bad\"]"));
         assert!(config.contains("[projects.\"/tmp\"]\ntrust_level = \"trusted\""));
@@ -900,13 +1219,14 @@ mod tests {
         install_codex(&opts).unwrap();
 
         let config = fs::read_to_string(&config_path).unwrap();
+        assert!(config.contains("[plugins.\"org-roam-toolkit@org-roam-toolkit\"]\nenabled = true"));
         assert!(config.contains("[mcp_servers.org-roam]\ncommand = \"ortk-mcp\""));
         assert!(!config.contains("args = [\"bad\"]"));
         assert!(config.contains("[projects.\"/tmp\"] # local project\ntrust_level = \"trusted\""));
     }
 
     #[test]
-    fn codex_dry_run_does_not_create_config_or_link() {
+    fn codex_dry_run_does_not_create_config_or_cache() {
         let root = TempDir::new().unwrap();
         let plugin = temp_plugin(&root);
         let mut opts = options(root.path().join("home"), plugin);
@@ -915,13 +1235,13 @@ mod tests {
         let summary = install_codex(&opts).unwrap();
 
         assert!(!opts.home.join(".codex/config.toml").exists());
-        assert!(!opts.home.join(".codex/plugins/org-roam-toolkit").exists());
-        assert!(summary.iter().any(|line| line.contains("would link")));
+        assert!(!codex_plugin_cache_path(&opts.home).exists());
+        assert!(summary.iter().any(|line| line.contains("would cache")));
         assert!(summary.iter().any(|line| line.contains("would create")));
     }
 
     #[test]
-    fn codex_install_rolls_back_config_update_when_symlink_fails() {
+    fn codex_install_rolls_back_config_update_when_cache_fails() {
         let root = TempDir::new().unwrap();
         let plugin = temp_plugin(&root);
         let opts = options(root.path().join("home"), plugin);
@@ -957,11 +1277,9 @@ mod tests {
             fs::read_link(opts.home.join(".claude/plugins/org-roam-toolkit")).unwrap(),
             plugin
         );
-        assert_eq!(
-            fs::read_link(opts.home.join(".codex/plugins/org-roam-toolkit")).unwrap(),
-            opts.plugin_dir
-        );
+        assert!(codex_plugin_cache_path(&opts.home).join("marker").exists());
         let config = fs::read_to_string(opts.home.join(".codex/config.toml")).unwrap();
+        assert!(config.contains("[plugins.\"org-roam-toolkit@org-roam-toolkit\"]\nenabled = true"));
         assert!(config.contains("[mcp_servers.org-roam]"));
         assert!(config.contains("command = \"ortk-mcp\""));
     }
@@ -983,7 +1301,7 @@ mod tests {
 
         assert!(err.contains("conflicting"));
         assert!(!opts.home.join(".claude/plugins/org-roam-toolkit").exists());
-        assert!(!opts.home.join(".codex/plugins/org-roam-toolkit").exists());
+        assert!(!codex_plugin_cache_path(&opts.home).exists());
     }
 
     #[test]
@@ -1001,7 +1319,7 @@ mod tests {
 
         assert!(err.contains("rolled back Claude plugin link"));
         assert!(!opts.home.join(".claude/plugins/org-roam-toolkit").exists());
-        assert!(!opts.home.join(".codex/plugins/org-roam-toolkit").exists());
+        assert!(!codex_plugin_cache_path(&opts.home).exists());
         assert_eq!(
             fs::read_to_string(&config_path).unwrap(),
             "model = \"gpt-5.5\"\n"
@@ -1029,7 +1347,7 @@ mod tests {
 
         assert!(err.contains("rolled back Claude plugin link"));
         assert_eq!(fs::read_link(claude_link).unwrap(), previous_plugin);
-        assert!(!opts.home.join(".codex/plugins/org-roam-toolkit").exists());
+        assert!(!codex_plugin_cache_path(&opts.home).exists());
         assert_eq!(
             fs::read_to_string(&config_path).unwrap(),
             "model = \"gpt-5.5\"\n"
@@ -1037,7 +1355,7 @@ mod tests {
     }
 
     #[test]
-    fn install_all_rolls_back_claude_and_codex_config_when_codex_link_fails() {
+    fn install_all_rolls_back_claude_and_codex_config_when_codex_cache_fails() {
         let root = TempDir::new().unwrap();
         let plugin = temp_plugin(&root);
         let opts = options(root.path().join("home"), plugin);
