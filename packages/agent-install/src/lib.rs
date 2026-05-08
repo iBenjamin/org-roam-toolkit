@@ -4,6 +4,7 @@ use std::os::unix::fs::symlink;
 use std::path::{Path, PathBuf};
 
 const PLUGIN_NAME: &str = "org-roam-toolkit";
+const CODEX_MCP_BLOCK: &str = "[mcp_servers.org-roam]\ncommand = \"ortk-mcp\"\n";
 
 #[derive(Clone, Debug)]
 pub struct InstallOptions {
@@ -113,8 +114,158 @@ pub fn install_claude(options: &InstallOptions) -> anyhow::Result<Vec<String>> {
     Ok(vec![line])
 }
 
-pub fn install_codex(_options: &InstallOptions) -> anyhow::Result<Vec<String>> {
-    anyhow::bail!("install_codex is not implemented")
+fn table_range(content: &str, table: &str) -> Option<(usize, usize)> {
+    let wanted = format!("[{table}]");
+    let mut start = None;
+    let mut end = content.len();
+    let mut offset = 0;
+
+    for line in content.split_inclusive('\n') {
+        let trimmed = line.trim();
+        if trimmed.starts_with('[') && trimmed.ends_with(']') {
+            if start.is_some() {
+                end = offset;
+                break;
+            }
+            if trimmed == wanted {
+                start = Some(offset);
+            }
+        }
+        offset += line.len();
+    }
+
+    start.map(|s| (s, end))
+}
+
+fn table_body(content: &str, range: (usize, usize)) -> &str {
+    &content[range.0..range.1]
+}
+
+fn quoted_value_for_key(table: &str, key: &str) -> Option<String> {
+    for line in table.lines() {
+        let trimmed = line.trim();
+        if let Some((lhs, rhs)) = trimmed.split_once('=') {
+            if lhs.trim() == key {
+                return Some(rhs.trim().trim_matches('"').to_string());
+            }
+        }
+    }
+    None
+}
+
+fn has_key(table: &str, key: &str) -> bool {
+    table.lines().any(|line| {
+        line.trim()
+            .split_once('=')
+            .map(|(lhs, _)| lhs.trim() == key)
+            .unwrap_or(false)
+    })
+}
+
+fn append_block(mut content: String, block: &str) -> String {
+    if !content.is_empty() && !content.ends_with('\n') {
+        content.push('\n');
+    }
+    if !content.is_empty() {
+        content.push('\n');
+    }
+    content.push_str(block);
+    content
+}
+
+fn replace_range(content: &str, range: (usize, usize), block: &str) -> String {
+    let mut next = String::new();
+    next.push_str(&content[..range.0]);
+    next.push_str(block);
+    if !block.ends_with('\n') {
+        next.push('\n');
+    }
+    if range.1 < content.len() && !content[range.1..].starts_with('\n') {
+        next.push('\n');
+    }
+    next.push_str(content[range.1..].trim_start_matches('\n'));
+    next
+}
+
+fn desired_codex_config(content: &str, force: bool) -> anyhow::Result<Option<String>> {
+    let Some(range) = table_range(content, "mcp_servers.org-roam") else {
+        return Ok(Some(append_block(content.to_string(), CODEX_MCP_BLOCK)));
+    };
+
+    let body = table_body(content, range);
+    let command = quoted_value_for_key(body, "command");
+    let has_args = has_key(body, "args");
+    if command.as_deref() == Some("ortk-mcp") && !has_args {
+        return Ok(None);
+    }
+
+    if !force {
+        bail!("conflicting [mcp_servers.org-roam] already exists; pass --force to replace it");
+    }
+
+    Ok(Some(replace_range(content, range, CODEX_MCP_BLOCK)))
+}
+
+fn write_backup(config_path: &Path, suffix: &str) -> anyhow::Result<PathBuf> {
+    let backup = config_path.with_file_name(format!("config.toml.bak-{suffix}"));
+    fs::copy(config_path, &backup)
+        .with_context(|| format!("backup {} to {}", config_path.display(), backup.display()))?;
+    Ok(backup)
+}
+
+pub fn install_codex(options: &InstallOptions) -> anyhow::Result<Vec<String>> {
+    let mut summary = Vec::new();
+    let (_, link_line) = install_plugin_symlink(
+        &options.home,
+        ".codex",
+        &options.plugin_dir,
+        options.dry_run,
+        options.force,
+    )?;
+    summary.push(link_line);
+
+    let codex_dir = options.home.join(".codex");
+    let config_path = codex_dir.join("config.toml");
+
+    if !config_path.exists() {
+        if options.dry_run {
+            summary.push(format!(
+                "would create: {} with org-roam MCP server",
+                config_path.display()
+            ));
+            return Ok(summary);
+        }
+        fs::create_dir_all(&codex_dir)
+            .with_context(|| format!("create {}", codex_dir.display()))?;
+        fs::write(&config_path, CODEX_MCP_BLOCK)
+            .with_context(|| format!("write {}", config_path.display()))?;
+        summary.push(format!("created: {}", config_path.display()));
+        return Ok(summary);
+    }
+
+    let current = fs::read_to_string(&config_path)
+        .with_context(|| format!("read {}", config_path.display()))?;
+    let Some(next) = desired_codex_config(&current, options.force)? else {
+        summary.push(format!(
+            "already configured: {} has [mcp_servers.org-roam]",
+            config_path.display()
+        ));
+        return Ok(summary);
+    };
+
+    if options.dry_run {
+        summary.push(format!(
+            "would update: {} with [mcp_servers.org-roam]",
+            config_path.display()
+        ));
+        return Ok(summary);
+    }
+
+    let backup = write_backup(&config_path, &options.backup_suffix)?;
+    fs::write(&config_path, next).with_context(|| format!("write {}", config_path.display()))?;
+    summary.push(format!("backup: {}", backup.display()));
+    summary.push(format!("updated: {}", config_path.display()));
+    Ok(summary)
 }
 
 #[cfg(test)]
@@ -198,5 +349,131 @@ mod tests {
 
         assert!(!opts.home.join(".claude/plugins/org-roam-toolkit").exists());
         assert!(summary.iter().any(|line| line.contains("would link")));
+    }
+
+    #[test]
+    fn codex_install_creates_config_with_org_roam_mcp() {
+        let root = TempDir::new().unwrap();
+        let plugin = temp_plugin(&root);
+        let opts = options(root.path().join("home"), plugin);
+
+        install_codex(&opts).unwrap();
+
+        let config = fs::read_to_string(opts.home.join(".codex/config.toml")).unwrap();
+        assert!(config.contains("[mcp_servers.org-roam]"));
+        assert!(config.contains("command = \"ortk-mcp\""));
+    }
+
+    #[test]
+    fn codex_install_appends_mcp_without_touching_existing_content() {
+        let root = TempDir::new().unwrap();
+        let plugin = temp_plugin(&root);
+        let opts = options(root.path().join("home"), plugin);
+        let config_path = opts.home.join(".codex/config.toml");
+        fs::create_dir_all(config_path.parent().unwrap()).unwrap();
+        fs::write(
+            &config_path,
+            "model = \"gpt-5.5\"\n\n[mcp_servers.gitnexus]\ncommand = \"gitnexus\"\n",
+        )
+        .unwrap();
+
+        install_codex(&opts).unwrap();
+
+        let config = fs::read_to_string(&config_path).unwrap();
+        assert!(config.starts_with("model = \"gpt-5.5\""));
+        assert!(config.contains("[mcp_servers.gitnexus]\ncommand = \"gitnexus\""));
+        assert!(config.contains("[mcp_servers.org-roam]\ncommand = \"ortk-mcp\""));
+        assert!(opts
+            .home
+            .join(".codex/config.toml.bak-20260508220000")
+            .exists());
+    }
+
+    #[test]
+    fn codex_install_is_idempotent_when_mcp_is_already_correct() {
+        let root = TempDir::new().unwrap();
+        let plugin = temp_plugin(&root);
+        let opts = options(root.path().join("home"), plugin);
+        let config_path = opts.home.join(".codex/config.toml");
+        fs::create_dir_all(config_path.parent().unwrap()).unwrap();
+        fs::write(
+            &config_path,
+            "[mcp_servers.org-roam]\ncommand = \"ortk-mcp\"\n",
+        )
+        .unwrap();
+
+        let summary = install_codex(&opts).unwrap();
+
+        assert_eq!(
+            fs::read_to_string(&config_path).unwrap(),
+            "[mcp_servers.org-roam]\ncommand = \"ortk-mcp\"\n",
+        );
+        assert!(!opts
+            .home
+            .join(".codex/config.toml.bak-20260508220000")
+            .exists());
+        assert!(summary
+            .iter()
+            .any(|line| line.contains("already configured")));
+    }
+
+    #[test]
+    fn codex_install_refuses_conflicting_mcp_server() {
+        let root = TempDir::new().unwrap();
+        let plugin = temp_plugin(&root);
+        let opts = options(root.path().join("home"), plugin);
+        let config_path = opts.home.join(".codex/config.toml");
+        fs::create_dir_all(config_path.parent().unwrap()).unwrap();
+        fs::write(
+            &config_path,
+            "[mcp_servers.org-roam]\ncommand = \"other\"\n",
+        )
+        .unwrap();
+
+        let err = install_codex(&opts).unwrap_err().to_string();
+
+        assert!(err.contains("conflicting"));
+        assert_eq!(
+            fs::read_to_string(&config_path).unwrap(),
+            "[mcp_servers.org-roam]\ncommand = \"other\"\n",
+        );
+    }
+
+    #[test]
+    fn codex_force_replaces_conflicting_mcp_server() {
+        let root = TempDir::new().unwrap();
+        let plugin = temp_plugin(&root);
+        let mut opts = options(root.path().join("home"), plugin);
+        opts.force = true;
+        let config_path = opts.home.join(".codex/config.toml");
+        fs::create_dir_all(config_path.parent().unwrap()).unwrap();
+        fs::write(
+            &config_path,
+            "model = \"gpt-5.5\"\n\n[mcp_servers.org-roam]\ncommand = \"other\"\nargs = [\"bad\"]\n\n[projects.\"/tmp\"]\ntrust_level = \"trusted\"\n",
+        )
+        .unwrap();
+
+        install_codex(&opts).unwrap();
+
+        let config = fs::read_to_string(&config_path).unwrap();
+        assert!(config.contains("model = \"gpt-5.5\""));
+        assert!(config.contains("[mcp_servers.org-roam]\ncommand = \"ortk-mcp\""));
+        assert!(!config.contains("args = [\"bad\"]"));
+        assert!(config.contains("[projects.\"/tmp\"]\ntrust_level = \"trusted\""));
+    }
+
+    #[test]
+    fn codex_dry_run_does_not_create_config_or_link() {
+        let root = TempDir::new().unwrap();
+        let plugin = temp_plugin(&root);
+        let mut opts = options(root.path().join("home"), plugin);
+        opts.dry_run = true;
+
+        let summary = install_codex(&opts).unwrap();
+
+        assert!(!opts.home.join(".codex/config.toml").exists());
+        assert!(!opts.home.join(".codex/plugins/org-roam-toolkit").exists());
+        assert!(summary.iter().any(|line| line.contains("would link")));
+        assert!(summary.iter().any(|line| line.contains("would create")));
     }
 }
