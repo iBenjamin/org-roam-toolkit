@@ -30,7 +30,7 @@ After step 2, restart Claude Code or Codex to load the plugin.
 
 | Bin (on PATH) | What it does |
 |---|---|
-| `ortk-mcp` | Rust MCP server for org-roam (registered as `org-roam` in the plugin's `.mcp.json`) |
+| `ortk-mcp` | Rust MCP server for org-roam (registered through the Claude plugin `.mcp.json` and Codex config) |
 | `ortk-emacs-eval` | Universal `emacsclient --eval` wrapper that auto-loads project elisp packages via `--pkg=NAME` |
 | `ortk-fetch` | Playwright headless fetcher with per-site extraction strategies (WeChat, archive.today, …) |
 | `ortk-ocr` | Tesseract.js OCR helper |
@@ -63,7 +63,7 @@ org-roam-toolkit/
 │   └── org-roam/                   # ortk-mcp — Rust MCP server backed by ortk-emacs-eval
 │
 ├── plugins/
-│   └── org-roam-toolkit/           # agent plugin (Claude commands + skills + .mcp.json + Codex manifest)
+│   └── org-roam-toolkit/           # agent plugin (Claude commands + skills + Claude .mcp.json + Codex manifest)
 │
 ├── Formula/
 │   └── org-roam-toolkit.rb         # Source-of-truth Homebrew formula (mirrored to iBenjamin/homebrew-tap)

@@ -19,7 +19,7 @@
 - Create `packages/agent-install/src/main.rs`
   - Thin CLI wrapper around library functions.
 - Create `plugins/org-roam-toolkit/.codex-plugin/plugin.json`
-  - Codex plugin manifest pointing at `./skills/` and `./.mcp.json`.
+  - Codex plugin manifest pointing at `./skills/`; `ortk-agent-install codex` owns Codex MCP config.
 - Modify `Formula/org-roam-toolkit.rb`
   - Build/install `ortk-agent-install`, remove its Cargo target artifacts, add a Homebrew smoke test, update caveats.
 - Modify `Makefile`
@@ -845,7 +845,7 @@ Create `plugins/org-roam-toolkit/.codex-plugin/plugin.json`:
 {
   "name": "org-roam-toolkit",
   "version": "0.1.0",
-  "description": "Org-roam knowledge workflows, skills, and MCP server for Codex.",
+  "description": "End-to-end org-roam workflows for Codex: shared skills plus installer-managed MCP setup. Requires the Homebrew-installed bins (ortk-mcp, ortk-emacs-eval, ortk-fetch, ortk-ocr).",
   "author": {
     "name": "Benjamin Wong",
     "email": "iwangkaimin@gmail.com",
@@ -864,20 +864,16 @@ Create `plugins/org-roam-toolkit/.codex-plugin/plugin.json`:
     "zettelkasten"
   ],
   "skills": "./skills/",
-  "mcpServers": "./.mcp.json",
   "interface": {
     "displayName": "org-roam toolkit",
-    "shortDescription": "Org-roam skills and MCP tools for Codex.",
-    "longDescription": "Use org-roam-toolkit from Codex with skills for org-mode, org-roam note management, web fetching, OCR, and local dashboard diagnostics. The plugin registers the org-roam MCP server backed by the Homebrew-installed ortk-mcp binary.",
+    "shortDescription": "Org-roam skills for Codex.",
+    "longDescription": "Use org-roam-toolkit from Codex with skills for org-mode, org-roam note management, web fetching, OCR, and local dashboard diagnostics. Run ortk-agent-install codex to register the org-roam MCP server in Codex config.",
     "developerName": "Benjamin Wong",
     "category": "Productivity",
     "capabilities": [
-      "Skills",
-      "MCP"
+      "Skills"
     ],
     "websiteURL": "https://github.com/iBenjamin/org-roam-toolkit",
-    "privacyPolicyURL": "https://github.com/iBenjamin/org-roam-toolkit",
-    "termsOfServiceURL": "https://github.com/iBenjamin/org-roam-toolkit",
     "defaultPrompt": [
       "Search my org-roam notes for this topic.",
       "Create an atomic org-roam note from this.",
@@ -1085,8 +1081,8 @@ Update "What's in here":
 ```markdown
 - **Claude Code commands** (`commands/`) — `/note`, `/study`, `/deep_note`, `/reference`, `/ref-extract`, `/to-read`, `/read-history`, `/add-toolkit`, `/gen-commit-msg`
 - **Agent skills** (`skills/`) — `atomic-notes`, `org`, `org-roam`, `fetch`, `dashboard`
-- **MCP server registration** (`.mcp.json`) — registers `org-roam`
-- **Codex manifest** (`.codex-plugin/plugin.json`) — points Codex at the shared skills and MCP config
+- **Claude MCP server registration** (`.mcp.json`) — registers `org-roam`
+- **Codex manifest** (`.codex-plugin/plugin.json`) — points Codex at the shared skills; `ortk-agent-install codex` writes MCP config
 ```
 
 Replace install instructions with:

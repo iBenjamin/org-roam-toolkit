@@ -117,6 +117,8 @@ pub fn install_claude(options: &InstallOptions) -> anyhow::Result<Vec<String>> {
 }
 
 pub fn install_all(options: &InstallOptions) -> anyhow::Result<Vec<String>> {
+    preflight_codex(options)?;
+
     let mut summary = Vec::new();
     summary.push("Claude:".to_string());
     summary.extend(install_claude(options)?);
@@ -218,10 +220,36 @@ fn quoted_value_for_key(table: &str, key: &str) -> Option<String> {
         let trimmed = uncommented.trim();
         if let Some((lhs, rhs)) = trimmed.split_once('=') {
             if lhs.trim() == key {
-                return Some(rhs.trim().trim_matches('"').to_string());
+                return toml_string_value(rhs.trim());
             }
         }
     }
+    None
+}
+
+fn toml_string_value(value: &str) -> Option<String> {
+    if let Some(rest) = value.strip_prefix('"') {
+        let mut escaped = false;
+        let mut out = String::new();
+        for ch in rest.chars() {
+            if escaped {
+                out.push(ch);
+                escaped = false;
+            } else if ch == '\\' {
+                escaped = true;
+            } else if ch == '"' {
+                return Some(out);
+            } else {
+                out.push(ch);
+            }
+        }
+        return None;
+    }
+
+    if let Some(rest) = value.strip_prefix('\'') {
+        return rest.split_once('\'').map(|(inner, _)| inner.to_string());
+    }
+
     None
 }
 
@@ -286,9 +314,8 @@ fn write_backup(config_path: &Path, suffix: &str) -> anyhow::Result<PathBuf> {
     Ok(backup)
 }
 
-pub fn install_codex(options: &InstallOptions) -> anyhow::Result<Vec<String>> {
-    let codex_dir = options.home.join(".codex");
-    let config_path = codex_dir.join("config.toml");
+fn planned_codex_config(options: &InstallOptions) -> anyhow::Result<(PathBuf, Option<String>)> {
+    let config_path = options.home.join(".codex/config.toml");
     let planned_config = if config_path.exists() {
         let current = fs::read_to_string(&config_path)
             .with_context(|| format!("read {}", config_path.display()))?;
@@ -296,16 +323,46 @@ pub fn install_codex(options: &InstallOptions) -> anyhow::Result<Vec<String>> {
     } else {
         Some(CODEX_MCP_BLOCK.to_string())
     };
+    Ok((config_path, planned_config))
+}
+
+fn preflight_plugin_symlink(
+    home: &Path,
+    agent_dir: &str,
+    plugin_dir: &Path,
+    force: bool,
+) -> anyhow::Result<()> {
+    let target = plugin_link_path(home, agent_dir);
+
+    if target.exists() || target.is_symlink() {
+        let meta = fs::symlink_metadata(&target)
+            .with_context(|| format!("inspect {}", target.display()))?;
+        if !meta.file_type().is_symlink() {
+            bail!("{} exists and is not a symlink", target.display());
+        }
+        if !same_link_target(&target, plugin_dir) && !force {
+            bail!(
+                "{} points elsewhere; pass --force to replace it",
+                target.display()
+            );
+        }
+    }
+
+    Ok(())
+}
+
+fn preflight_codex(options: &InstallOptions) -> anyhow::Result<()> {
+    preflight_plugin_symlink(&options.home, ".codex", &options.plugin_dir, options.force)?;
+    planned_codex_config(options)?;
+    Ok(())
+}
+
+pub fn install_codex(options: &InstallOptions) -> anyhow::Result<Vec<String>> {
+    let codex_dir = options.home.join(".codex");
+    let (config_path, planned_config) = planned_codex_config(options)?;
+    preflight_plugin_symlink(&options.home, ".codex", &options.plugin_dir, options.force)?;
 
     let mut summary = Vec::new();
-    let (_, link_line) = install_plugin_symlink(
-        &options.home,
-        ".codex",
-        &options.plugin_dir,
-        options.dry_run,
-        options.force,
-    )?;
-    summary.push(link_line);
 
     match (config_path.exists(), planned_config) {
         (false, Some(_)) if options.dry_run => {
@@ -342,6 +399,16 @@ pub fn install_codex(options: &InstallOptions) -> anyhow::Result<Vec<String>> {
         }
         (false, None) => unreachable!("missing config always needs creation"),
     }
+
+    let (_, link_line) = install_plugin_symlink(
+        &options.home,
+        ".codex",
+        &options.plugin_dir,
+        options.dry_run,
+        options.force,
+    )?;
+    summary.insert(0, link_line);
+
     Ok(summary)
 }
 
@@ -551,6 +618,34 @@ mod tests {
     }
 
     #[test]
+    fn codex_install_is_idempotent_when_command_uses_single_quoted_string() {
+        let root = TempDir::new().unwrap();
+        let plugin = temp_plugin(&root);
+        let opts = options(root.path().join("home"), plugin);
+        let config_path = opts.home.join(".codex/config.toml");
+        fs::create_dir_all(config_path.parent().unwrap()).unwrap();
+        fs::write(
+            &config_path,
+            "[mcp_servers.org-roam]\ncommand = 'ortk-mcp'\n",
+        )
+        .unwrap();
+
+        let summary = install_codex(&opts).unwrap();
+
+        assert_eq!(
+            fs::read_to_string(&config_path).unwrap(),
+            "[mcp_servers.org-roam]\ncommand = 'ortk-mcp'\n",
+        );
+        assert!(!opts
+            .home
+            .join(".codex/config.toml.bak-20260508220000")
+            .exists());
+        assert!(summary
+            .iter()
+            .any(|line| line.contains("already configured")));
+    }
+
+    #[test]
     fn codex_install_refuses_conflicting_mcp_server() {
         let root = TempDir::new().unwrap();
         let plugin = temp_plugin(&root);
@@ -672,6 +767,26 @@ mod tests {
         let config = fs::read_to_string(opts.home.join(".codex/config.toml")).unwrap();
         assert!(config.contains("[mcp_servers.org-roam]"));
         assert!(config.contains("command = \"ortk-mcp\""));
+    }
+
+    #[test]
+    fn install_all_does_not_create_claude_link_when_codex_config_conflicts() {
+        let root = TempDir::new().unwrap();
+        let plugin = temp_plugin(&root);
+        let opts = options(root.path().join("home"), plugin);
+        let config_path = opts.home.join(".codex/config.toml");
+        fs::create_dir_all(config_path.parent().unwrap()).unwrap();
+        fs::write(
+            &config_path,
+            "[mcp_servers.org-roam]\ncommand = \"other\"\n",
+        )
+        .unwrap();
+
+        let err = install_all(&opts).unwrap_err().to_string();
+
+        assert!(err.contains("conflicting"));
+        assert!(!opts.home.join(".claude/plugins/org-roam-toolkit").exists());
+        assert!(!opts.home.join(".codex/plugins/org-roam-toolkit").exists());
     }
 
     #[test]

@@ -115,7 +115,6 @@ The manifest declares:
 
 - plugin metadata matching the Claude plugin metadata
 - `skills: "./skills/"`
-- `mcpServers: "./.mcp.json"`
 - interface metadata for discovery
 
 The plugin's `.mcp.json` already uses:
@@ -130,7 +129,9 @@ The plugin's `.mcp.json` already uses:
 }
 ```
 
-That file should remain shared between Claude and Codex plugin metadata.
+That file remains the Claude MCP registration. Codex MCP registration is written
+by `ortk-agent-install codex` into `~/.codex/config.toml`, so Codex has one
+authoritative MCP source.
 
 ## Implementation Shape
 

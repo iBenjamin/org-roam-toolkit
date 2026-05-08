@@ -101,7 +101,11 @@ class OrgRoamToolkit < Formula
     # ortk-dashboard responds to --version (built from cargo, has version baked in)
     assert_match version.to_s, shell_output("#{bin}/ortk-dashboard --version")
     assert_match "ortk-agent-install", shell_output("#{bin}/ortk-agent-install --help")
-    assert_match "would link", shell_output("#{bin}/ortk-agent-install all --dry-run --plugin-dir #{opt_libexec}/plugins/org-roam-toolkit")
+    with_env(HOME: testpath) do
+      assert_match "would link",
+                   shell_output("#{bin}/ortk-agent-install all --dry-run --plugin-dir " \
+                                "#{opt_libexec}/plugins/org-roam-toolkit")
+    end
     # ortk-emacs-eval --help works without a daemon
     assert_match "emacs-eval", shell_output("#{bin}/ortk-emacs-eval --help")
   end

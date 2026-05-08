@@ -6,16 +6,16 @@ End-to-end org-roam workflows for Claude Code and Codex.
 
 - **Claude Code commands** (`commands/`) — 9 slash commands: `/note`, `/study`, `/deep_note`, `/reference`, `/ref-extract`, `/to-read`, `/read-history`, `/add-toolkit`, `/gen-commit-msg`
 - **Agent skills** (`skills/`) — `atomic-notes` (format spec), `org` (agenda + capture), `org-roam` (note management), `fetch` (playwright + OCR), `dashboard` (observability)
-- **MCP server registration** (`.mcp.json`) — registers the `org-roam` MCP server backed by the Homebrew-installed `ortk-mcp` bin
-- **Codex plugin manifest** (`.codex-plugin/plugin.json`) — points Codex at `./skills/` and `./.mcp.json`
+- **Claude MCP server registration** (`.mcp.json`) — registers the `org-roam` MCP server backed by the Homebrew-installed `ortk-mcp` bin
+- **Codex plugin manifest** (`.codex-plugin/plugin.json`) — points Codex at `./skills/`; `ortk-agent-install codex` writes the MCP registration into `~/.codex/config.toml`
 
 ## Runtime requirements
 
-This plugin **requires** the `iBenjamin/tap/org-roam-toolkit` Homebrew package, which provides the bins the skills/commands and `.mcp.json` call on PATH:
+This plugin **requires** the `iBenjamin/tap/org-roam-toolkit` Homebrew package, which provides the bins the skills, commands, and MCP registrations call on PATH:
 
 | Bin | Purpose |
 |---|---|
-| `ortk-mcp` | Rust MCP server for org-roam (referenced by `.mcp.json`) |
+| `ortk-mcp` | Rust MCP server for org-roam (referenced by Claude `.mcp.json` and Codex config) |
 | `ortk-emacs-eval` | Universal emacsclient wrapper (used by `org` and `org-roam` skills) |
 | `ortk-fetch` | Playwright-based fetcher (used by `fetch` skill) |
 | `ortk-ocr` | OCR helper (used by `fetch` skill) |
