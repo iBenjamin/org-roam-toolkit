@@ -24,8 +24,7 @@
   ],
   "workspaces": [
     "packages/emacs",
-    "packages/web",
-    "mcp-servers/org-roam"
+    "packages/web"
   ],
   "scripts": {
     "build": "tsc -b",

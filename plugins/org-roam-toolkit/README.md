@@ -14,7 +14,7 @@ This plugin **requires** the `iwangkaimin/tap/org-roam-toolkit` Homebrew package
 
 | Bin | Purpose |
 |---|---|
-| `ortk-mcp` | MCP server for org-roam (referenced by `.mcp.json`) |
+| `ortk-mcp` | Rust MCP server for org-roam (referenced by `.mcp.json`) |
 | `ortk-emacs-eval` | Universal emacsclient wrapper (used by `org` and `org-roam` skills) |
 | `ortk-fetch` | Playwright-based fetcher (used by `fetch` skill) |
 | `ortk-ocr` | OCR helper (used by `fetch` skill) |

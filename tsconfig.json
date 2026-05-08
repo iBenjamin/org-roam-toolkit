@@ -3,7 +3,6 @@
   "files": [],
   "references": [
     { "path": "./packages/emacs" },
-    { "path": "./packages/web" },
-    { "path": "./mcp-servers/org-roam" }
+    { "path": "./packages/web" }
   ]
 }

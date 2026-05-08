@@ -25,7 +25,7 @@ After step 2, restart Claude Code to load the plugin.
 
 | Bin (on PATH) | What it does |
 |---|---|
-| `ortk-mcp` | MCP server for org-roam (registered as `org-roam` in the plugin's `.mcp.json`) |
+| `ortk-mcp` | Rust MCP server for org-roam (registered as `org-roam` in the plugin's `.mcp.json`) |
 | `ortk-emacs-eval` | Universal `emacsclient --eval` wrapper that auto-loads project elisp packages via `--pkg=NAME` |
 | `ortk-fetch` | Playwright headless fetcher with per-site extraction strategies (WeChat, archive.today, …) |
 | `ortk-ocr` | Tesseract.js OCR helper |
@@ -55,7 +55,7 @@ org-roam-toolkit/
 │   └── dashboard-server/           # ortk-dashboard — Rust crate (axum + HTMX, single static binary)
 │
 ├── mcp-servers/
-│   └── org-roam/                   # @org-roam-toolkit/mcp-org-roam — MCP server backed by emacsclient
+│   └── org-roam/                   # ortk-mcp — Rust MCP server backed by ortk-emacs-eval
 │
 ├── plugins/
 │   └── org-roam-toolkit/           # Claude Code plugin (commands + skills + .mcp.json)

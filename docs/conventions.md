@@ -7,7 +7,7 @@ The two-axis layout: `packages/` (capability libraries) vs `mcp-servers/` + `plu
 | Kind | Example | Notes |
 |---|---|---|
 | Capability package | `@org-roam-toolkit/emacs`, `@org-roam-toolkit/web` | one per domain (emacs / web / future...) |
-| MCP server package | `@org-roam-toolkit/mcp-org-roam` | `mcp-<consumer-name>` prefix |
+| MCP server crate | `ortk-mcp` | Rust binary crate under `mcp-servers/<consumer-name>` |
 | Skill directory | `plugins/org-roam-toolkit/skills/org-roam/` | short kebab-case; SKILL.md `name:` may differ from dir name |
 | Elisp subpackage | `elisp/org-roam-skill/` | dir name = elisp `(provide ...)` symbol |
 
@@ -56,15 +56,16 @@ Register in `packages/web/src/sites/index.ts`. Order matters: the first `match()
 
 ## TypeScript
 
-- TypeScript packages (`packages/emacs`, `packages/web`, `mcp-servers/org-roam`) use `tsconfig.base.json` and project references.
+- TypeScript packages (`packages/emacs`, `packages/web`) use `tsconfig.base.json` and project references.
 - ES module output, NodeNext resolution.
 - Source in `src/`, output in `dist/` (gitignored).
 - DOM types are only enabled in `packages/web` (it runs page.evaluate callbacks). Other packages stay node-only.
 
 ## Rust
 
-- `packages/dashboard-server/` is a Rust crate (`ortk-dashboard`, axum + HTMX). It is intentionally *not* an npm workspace — Cargo manages its own deps.
-- Single static binary; targets only the host platform (macOS arm64 / x86_64). Cross-compilation is out of scope.
+- `packages/dashboard-server/` is a Rust crate (`ortk-dashboard`, axum + HTMX). `mcp-servers/org-roam/` is a Rust crate (`ortk-mcp`, JSON-RPC stdio MCP adapter).
+- Rust crates are intentionally *not* npm workspaces — Cargo manages their deps.
+- Single static binaries; target only the host platform (macOS arm64 / x86_64). Cross-compilation is out of scope.
 - Probes shell out to `ortk-emacs-eval` and `ortk-mcp` on PATH — protocol parity with the rest of the stack, no shared library.
 
 ## What does NOT belong in this repo

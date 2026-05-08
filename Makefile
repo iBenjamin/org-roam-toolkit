@@ -31,6 +31,7 @@ build: build-rust
 
 build-rust:
 	cd packages/dashboard-server && cargo build --release
+	cargo build --release --manifest-path mcp-servers/org-roam/Cargo.toml
 
 dashboard-build: build
 
@@ -45,6 +46,7 @@ test: build
 
 test-rust:
 	cd packages/dashboard-server && cargo test
+	cargo test --manifest-path mcp-servers/org-roam/Cargo.toml
 
 lint:
 	npm run lint
@@ -53,12 +55,14 @@ lint:
 
 lint-rust:
 	cd packages/dashboard-server && cargo clippy --all-targets -- -D warnings
+	cargo clippy --all-targets --manifest-path mcp-servers/org-roam/Cargo.toml -- -D warnings
 
 clean: clean-rust
 	npm run clean
 
 clean-rust:
 	cd packages/dashboard-server && cargo clean
+	cargo clean --manifest-path mcp-servers/org-roam/Cargo.toml
 
 elisp-test:
 	@if [ -f packages/emacs/Eldev ]; then \
@@ -100,7 +104,7 @@ install-claude:
 	@echo "Either install the brew formula, or symlink the dev bins yourself, e.g.:"
 	@echo "  ln -snf $(REPO_ROOT)/packages/emacs/bin/emacs-eval                       /usr/local/bin/ortk-emacs-eval"
 	@echo "  ln -snf $(REPO_ROOT)/packages/dashboard-server/target/release/ortk-dashboard /usr/local/bin/ortk-dashboard"
-	@echo "  ln -snf $(REPO_ROOT)/mcp-servers/org-roam/dist/index.js                  /usr/local/bin/ortk-mcp"
+	@echo "  ln -snf $(REPO_ROOT)/mcp-servers/org-roam/target/release/ortk-mcp        /usr/local/bin/ortk-mcp"
 	@echo "  ln -snf $(REPO_ROOT)/packages/web/dist/fetch-cli.js                      /usr/local/bin/ortk-fetch"
 	@echo "  ln -snf $(REPO_ROOT)/packages/web/dist/ocr-cli.js                        /usr/local/bin/ortk-ocr"
 

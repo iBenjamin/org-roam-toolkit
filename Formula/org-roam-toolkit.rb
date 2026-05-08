@@ -29,7 +29,7 @@ class OrgRoamToolkit < Formula
   depends_on "emacs" => :recommended
 
   def install
-    # --- Node side: emacs / web / mcp-org-roam packages ---------------
+    # --- Node side: emacs / web packages -------------------------------
     # Install Node deps for all workspaces and compile the TypeScript.
     system "npm", "install", "--no-audit", "--no-fund", "--ignore-scripts"
     system "npm", "run", "build"
@@ -37,20 +37,23 @@ class OrgRoamToolkit < Formula
     # due to workspace edges; the resulting tree is still functional.
     system "npm", "prune", "--omit=dev"
 
-    # --- Rust side: ortk-dashboard --------------------------------------
+    # --- Rust side: ortk-dashboard / ortk-mcp ---------------------------
     cd "packages/dashboard-server" do
+      system "cargo", "build", "--release", "--locked"
+    end
+    cd "mcp-servers/org-roam" do
       system "cargo", "build", "--release", "--locked"
     end
 
     # --- Stage everything under libexec --------------------------------
     # The bash bin (emacs-eval) resolves elisp/ via $BASH_SOURCE → libexec.
-    # The Node bins (mcp-org-roam, fetch, ocr) resolve @org-roam-toolkit/emacs
-    # via libexec/node_modules. The Rust bin is self-contained.
+    # The Node bins (fetch, ocr) resolve packages via libexec/node_modules.
+    # The Rust bins are self-contained.
     libexec.install Dir["*"]
 
     # --- Expose ortk-* bins on PATH ------------------------------------
     bin.install_symlink libexec/"packages/emacs/bin/emacs-eval" => "ortk-emacs-eval"
-    bin.install_symlink libexec/"mcp-servers/org-roam/dist/index.js" => "ortk-mcp"
+    bin.install_symlink libexec/"mcp-servers/org-roam/target/release/ortk-mcp" => "ortk-mcp"
     bin.install_symlink libexec/"packages/web/dist/fetch-cli.js" => "ortk-fetch"
     bin.install_symlink libexec/"packages/web/dist/ocr-cli.js" => "ortk-ocr"
     bin.install_symlink libexec/"packages/dashboard-server/target/release/ortk-dashboard" => "ortk-dashboard"

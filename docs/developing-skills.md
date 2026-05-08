@@ -9,7 +9,7 @@ org-roam-toolkit/
 │   ├── web/                          # @org-roam-toolkit/web   — dist/{fetch,ocr}-cli.js (→ ortk-fetch / ortk-ocr), src/sites/
 │   └── dashboard-server/             # ortk-dashboard — Rust crate (axum + HTMX)
 ├── mcp-servers/
-│   └── org-roam/                     # @org-roam-toolkit/mcp-org-roam
+│   └── org-roam/                     # ortk-mcp Rust crate
 └── plugins/
     └── org-roam-toolkit/             # Claude Code plugin
         ├── commands/                 # 9 slash commands
@@ -61,14 +61,14 @@ A skill should not contain `.ts` or `.el` files. The plugin is auto-discovered b
 ## Adding a new MCP server
 
 1. `mkdir -p mcp-servers/<name>/src`
-2. Create `package.json` with name `@org-roam-toolkit/mcp-<name>`, `bin` entry, and dependency on whichever capability packages it needs (e.g. `"@org-roam-toolkit/emacs": "*"`)
-3. Add a `tsconfig.json` extending `../../tsconfig.base.json` with `references` to the capability package
-4. Add to root `tsconfig.json` `references`
-5. Write `src/index.ts` — import capabilities, define MCP `Tool[]`, dispatch in `CallToolRequestSchema` handler
+2. Create `Cargo.toml` with a binary target named `ortk-mcp-<name>` (or `ortk-mcp` for the primary org-roam server).
+3. Keep protocol-facing helpers testable in `src/lib.rs`; keep stdio loop wiring in `src/main.rs`.
+4. Shell out to public `ortk-*` bins for capability boundaries. For Emacs-backed operations, call `ortk-emacs-eval --pkg=<pkg>` rather than `emacsclient` directly.
+5. Add the crate to `Makefile` `build-rust`, `test-rust`, `lint-rust`, and `clean-rust`, then expose the release binary from the Homebrew formula.
 
 ## Testing without a daemon
 
-`packages/emacs/src/emacs-client.ts` exposes pure helpers (`buildKeywordArgs`, `parseElispResult`) that can be unit-tested without launching emacs. The site-handler registry in `packages/web` is similarly testable without a browser. End-to-end tests that actually launch the daemon or browser are out of scope for the unit suite — verify those manually.
+`packages/emacs/src/emacs-client.ts` exposes pure helpers (`buildKeywordArgs`, `parseElispResult`) that can be unit-tested without launching emacs. MCP crates should likewise keep tool catalogs, resource catalogs, and expression builders testable without a daemon. The site-handler registry in `packages/web` is similarly testable without a browser. End-to-end tests that actually launch the daemon or browser are out of scope for the unit suite — verify those manually.
 
 ## What NOT to do
 
