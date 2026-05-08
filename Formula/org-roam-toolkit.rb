@@ -42,6 +42,13 @@ class OrgRoamToolkit < Formula
       system "cargo", "build", "--release", "--locked"
     end
 
+    # Install release binaries directly and keep Cargo build artifacts out
+    # of libexec; the target directories are large and not needed at runtime.
+    bin.install "mcp-servers/org-roam/target/release/ortk-mcp"
+    bin.install "packages/dashboard-server/target/release/ortk-dashboard"
+    rm_r "mcp-servers/org-roam/target"
+    rm_r "packages/dashboard-server/target"
+
     # --- Stage everything under libexec --------------------------------
     # The bash bin (emacs-eval) resolves elisp/ via $BASH_SOURCE → libexec.
     # The Node bins (fetch, ocr) resolve packages via libexec/node_modules.
@@ -50,10 +57,8 @@ class OrgRoamToolkit < Formula
 
     # --- Expose ortk-* bins on PATH ------------------------------------
     bin.install_symlink libexec/"packages/emacs/bin/emacs-eval" => "ortk-emacs-eval"
-    bin.install_symlink libexec/"mcp-servers/org-roam/target/release/ortk-mcp" => "ortk-mcp"
     bin.install_symlink libexec/"packages/web/dist/fetch-cli.js" => "ortk-fetch"
     bin.install_symlink libexec/"packages/web/dist/ocr-cli.js" => "ortk-ocr"
-    bin.install_symlink libexec/"packages/dashboard-server/target/release/ortk-dashboard" => "ortk-dashboard"
   end
 
   service do
