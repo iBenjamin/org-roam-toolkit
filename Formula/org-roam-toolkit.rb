@@ -75,9 +75,9 @@ class OrgRoamToolkit < Formula
         ortk-agent-install claude
         ortk-agent-install codex
 
-      The installer links the plugin directory into the agent config directory.
+      The installer links the plugin into ~/.claude/plugins and ~/.codex/plugins.
       For Codex, it also adds [mcp_servers.org-roam] to ~/.codex/config.toml
-      after writing a backup.
+      backing up an existing config before changing it.
 
       Restart Claude Code or Codex to load the plugin.
 
