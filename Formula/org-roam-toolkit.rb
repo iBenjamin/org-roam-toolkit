@@ -91,6 +91,6 @@ class OrgRoamToolkit < Formula
     # ortk-dashboard responds to --version (built from cargo, has version baked in)
     assert_match version.to_s, shell_output("#{bin}/ortk-dashboard --version")
     # ortk-emacs-eval --help works without a daemon
-    assert_match "emacs-eval", shell_output("#{bin}/ortk-emacs-eval --help 2>&1", 0..1)
+    assert_match "emacs-eval", shell_output("#{bin}/ortk-emacs-eval --help")
   end
 end
