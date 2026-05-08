@@ -102,7 +102,7 @@ mod tests {
     use std::process::{Command, Stdio};
     use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-    use tokio::time::sleep;
+    use tokio::time::{sleep, Instant};
 
     use super::{eval_pkg_json_with_program, unwrap_elisp_string};
 
@@ -149,13 +149,28 @@ mod tests {
             .status()
             .expect("chmod timeout script");
 
-        let result = eval_pkg_json_with_program(
-            script_path.to_str().expect("utf8 script path"),
-            "org-roam-skill",
-            "(never-returns)",
-            Duration::from_millis(750),
-        )
-        .await;
+        let program = script_path.to_str().expect("utf8 script path").to_string();
+        let probe = tokio::spawn(async move {
+            eval_pkg_json_with_program(
+                &program,
+                "org-roam-skill",
+                "(never-returns)",
+                Duration::from_millis(750),
+            )
+            .await
+        });
+
+        let readiness_deadline = Instant::now() + Duration::from_secs(2);
+        while !pid_path.exists() && Instant::now() < readiness_deadline {
+            sleep(Duration::from_millis(25)).await;
+        }
+
+        assert!(
+            pid_path.exists(),
+            "timeout script did not write its pid before the readiness deadline"
+        );
+
+        let result = probe.await.expect("probe task panicked");
 
         assert!(result
             .expect_err("probe should time out")
