@@ -34,13 +34,15 @@ class OrgRoamToolkit < Formula
     # due to workspace edges; the resulting tree is still functional.
     system "npm", "prune", "--omit=dev"
 
-    # --- Rust side: ortk-dashboard / ortk-mcp ---------------------------
+    # --- Rust side: ortk-dashboard / ortk-agent-install / ortk-mcp ------
     system "cargo", "install", *std_cargo_args(path: "packages/dashboard-server")
+    system "cargo", "install", *std_cargo_args(path: "packages/agent-install")
     system "cargo", "install", *std_cargo_args(path: "mcp-servers/org-roam")
 
     # Keep Cargo build artifacts out of libexec; the target directories are
     # large and not needed at runtime.
     rm_r "mcp-servers/org-roam/target"
+    rm_r "packages/agent-install/target"
     rm_r "packages/dashboard-server/target"
 
     # --- Stage everything under libexec --------------------------------
@@ -64,11 +66,20 @@ class OrgRoamToolkit < Formula
 
   def caveats
     <<~EOS
-      To enable the Claude Code plugin (commands + skills + MCP server registration):
+      To enable Claude Code and Codex integrations:
 
-        ln -snf #{opt_libexec}/plugins/org-roam-toolkit ~/.claude/plugins/org-roam-toolkit
+        ortk-agent-install all
 
-      Then restart Claude Code to load the plugin.
+      Or install one agent at a time:
+
+        ortk-agent-install claude
+        ortk-agent-install codex
+
+      The installer links the plugin directory into the agent config directory.
+      For Codex, it also adds [mcp_servers.org-roam] to ~/.codex/config.toml
+      after writing a backup.
+
+      Restart Claude Code or Codex to load the plugin.
 
       To start the observability dashboard at login:
 
@@ -89,6 +100,8 @@ class OrgRoamToolkit < Formula
   test do
     # ortk-dashboard responds to --version (built from cargo, has version baked in)
     assert_match version.to_s, shell_output("#{bin}/ortk-dashboard --version")
+    assert_match "ortk-agent-install", shell_output("#{bin}/ortk-agent-install --help")
+    assert_match "would link", shell_output("#{bin}/ortk-agent-install all --dry-run --plugin-dir #{opt_libexec}/plugins/org-roam-toolkit")
     # ortk-emacs-eval --help works without a daemon
     assert_match "emacs-eval", shell_output("#{bin}/ortk-emacs-eval --help")
   end
