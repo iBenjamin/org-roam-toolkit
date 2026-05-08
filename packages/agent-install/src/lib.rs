@@ -1,4 +1,6 @@
 use anyhow::{bail, Context};
+use chrono::Local;
+use std::env;
 use std::fs;
 use std::os::unix::fs::symlink;
 use std::path::{Path, PathBuf};
@@ -112,6 +114,39 @@ pub fn install_claude(options: &InstallOptions) -> anyhow::Result<Vec<String>> {
         options.force,
     )?;
     Ok(vec![line])
+}
+
+pub fn install_all(options: &InstallOptions) -> anyhow::Result<Vec<String>> {
+    let mut summary = Vec::new();
+    summary.push("Claude:".to_string());
+    summary.extend(install_claude(options)?);
+    summary.push("Codex:".to_string());
+    summary.extend(install_codex(options)?);
+    Ok(summary)
+}
+
+pub fn backup_suffix_now() -> String {
+    Local::now().format("%Y%m%d%H%M%S").to_string()
+}
+
+pub fn default_plugin_dir() -> anyhow::Result<PathBuf> {
+    let exe = env::current_exe().context("resolve current executable path")?;
+    if let Some(prefix) = exe.parent().and_then(Path::parent) {
+        let installed = prefix.join("libexec/plugins").join(PLUGIN_NAME);
+        if installed.exists() {
+            return Ok(installed);
+        }
+    }
+
+    let dev = env::current_dir()
+        .context("resolve current directory")?
+        .join("plugins")
+        .join(PLUGIN_NAME);
+    if dev.exists() {
+        return Ok(dev);
+    }
+
+    bail!("could not infer org-roam-toolkit plugin directory; pass --plugin-dir");
 }
 
 fn table_range(content: &str, table: &str) -> Option<(usize, usize)> {
@@ -591,5 +626,36 @@ mod tests {
         assert!(!opts.home.join(".codex/plugins/org-roam-toolkit").exists());
         assert!(summary.iter().any(|line| line.contains("would link")));
         assert!(summary.iter().any(|line| line.contains("would create")));
+    }
+
+    #[test]
+    fn install_all_configures_claude_and_codex() {
+        let root = TempDir::new().unwrap();
+        let plugin = temp_plugin(&root);
+        let opts = options(root.path().join("home"), plugin.clone());
+
+        let summary = install_all(&opts).unwrap();
+
+        assert_eq!(summary.first().map(String::as_str), Some("Claude:"));
+        assert!(summary.iter().any(|line| line == "Codex:"));
+        assert_eq!(
+            fs::read_link(opts.home.join(".claude/plugins/org-roam-toolkit")).unwrap(),
+            plugin
+        );
+        assert_eq!(
+            fs::read_link(opts.home.join(".codex/plugins/org-roam-toolkit")).unwrap(),
+            opts.plugin_dir
+        );
+        let config = fs::read_to_string(opts.home.join(".codex/config.toml")).unwrap();
+        assert!(config.contains("[mcp_servers.org-roam]"));
+        assert!(config.contains("command = \"ortk-mcp\""));
+    }
+
+    #[test]
+    fn default_backup_suffix_has_timestamp_shape() {
+        let suffix = backup_suffix_now();
+
+        assert_eq!(suffix.len(), 14);
+        assert!(suffix.chars().all(|ch| ch.is_ascii_digit()));
     }
 }
