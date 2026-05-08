@@ -79,10 +79,10 @@ End users install via Homebrew — the rest of this section is for working **on*
 
 ```bash
 make install          # npm install (workspaces)
-make build            # tsc -b (all TS packages)
+make build            # tsc -b + cargo build --release
 make dashboard        # build + run server in foreground on $DASH_PORT (default 9876)
-make test             # vitest + eldev tests (if Eldev present)
-make lint             # vitest lint hooks + eldev lint
+make test             # vitest + cargo test + eldev tests (if Eldev present)
+make lint             # npm lint hooks + cargo clippy + eldev lint
 make install-agents   # symlink/configure plugins/org-roam-toolkit for Claude Code + Codex (dev mode)
 make install-claude   # symlink plugins/org-roam-toolkit into ~/.claude/plugins/ (dev mode)
 make install-codex    # symlink plugin and configure ~/.codex/config.toml (dev mode)
