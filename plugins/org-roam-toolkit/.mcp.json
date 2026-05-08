@@ -1,0 +1,7 @@
+{
+  "mcpServers": {
+    "org-roam": {
+      "command": "ortk-mcp"
+    }
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "org-roam-toolkit",
+  "description": "Personal Claude Code plugin marketplace: org-roam knowledge management workflows, MCP server, fetch + OCR helpers, and an observability dashboard. The runtime bins ship via Homebrew (iwangkaimin/tap).",
+  "owner": {
+    "name": "Benjamin Wong",
+    "email": "iwangkaimin@gmail.com",
+    "url": "https://github.com/iwangkaimin"
+  },
+  "plugins": [
+    {
+      "name": "org-roam-toolkit",
+      "description": "End-to-end org-roam workflows for Claude Code: 9 slash commands (note / study / deep_note / reference / ref-extract / to-read / read-history / add-toolkit / gen-commit-msg), 5 skills (atomic-notes / org / org-roam / fetch / dashboard), and the org-roam MCP server. Requires `brew install iwangkaimin/tap/org-roam-toolkit`.",
+      "author": {
+        "name": "Benjamin Wong",
+        "url": "https://github.com/iwangkaimin"
+      },
+      "category": "productivity",
+      "license": "MIT",
+      "source": "./plugins/org-roam-toolkit"
+    }
+  ]
+}

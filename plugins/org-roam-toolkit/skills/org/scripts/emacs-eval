@@ -1,0 +1,4 @@
+#!/bin/bash
+# Forwarder to ortk-emacs-eval (installed by Homebrew), pre-applied with
+# --pkg=org-skill.
+exec ortk-emacs-eval --pkg=org-skill "$@"
