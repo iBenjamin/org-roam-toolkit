@@ -17,7 +17,7 @@
 class OrgRoamToolkit < Formula
   desc "MCP server and Claude Code plugin for Emacs org-roam"
   homepage "https://github.com/iBenjamin/org-roam-toolkit"
-  url "https://github.com/iBenjamin/org-roam-toolkit/archive/refs/tags/v0.2.6.tar.gz"
+  url "https://github.com/iBenjamin/org-roam-toolkit/archive/refs/tags/v0.2.7.tar.gz"
   sha256 "2e48a6ec0e26ddf391e58f1f18c6aa77accd976341ad8dee62fb413d9a3f9319"
   license "MIT"
   head "https://github.com/iBenjamin/org-roam-toolkit.git", branch: "main"

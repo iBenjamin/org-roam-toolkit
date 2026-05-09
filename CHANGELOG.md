@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.7] - 2026-05-09
+
 ### Fixed
 - `roam_create_link` now appends each inserted link beneath an explicit `* Links` top-level heading instead of as a bare `[[id:UUID][Title]]` paragraph at end of file. The heading is created on the first insertion and reused thereafter, idempotently. Existing notes with floating id-link paragraphs need a one-off rewrite to add the heading.
 
