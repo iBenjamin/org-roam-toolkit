@@ -49,7 +49,7 @@ class OrgRoamToolkit < Formula
     # The bash bin (emacs-eval) resolves elisp/ via $BASH_SOURCE → libexec.
     # The Node bins (fetch, ocr) resolve packages via libexec/node_modules.
     # The Rust bins are self-contained.
-    libexec.install Dir["*"]
+    libexec.install Dir["*"], ".claude-plugin"
 
     # --- Expose ortk-* bins on PATH ------------------------------------
     bin.install_symlink libexec/"packages/emacs/bin/emacs-eval" => "ortk-emacs-eval"
