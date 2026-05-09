@@ -185,6 +185,28 @@ Use these criteria for `/deep_note` and `/ref-extract`:
 - Existing same or near-same note: skip creation, but still create links.
 - Overly broad concepts such as "Architecture" or "Design Patterns": skip creation unless the user explicitly asks for that broad note.
 
+### On-disk layout produced by `roam_create_link`
+
+The MCP tool appends each inserted link as a `[[id:UUID][Title]]` paragraph beneath a top-level `* Links` heading at the end of the file. The heading is created automatically on the first link insertion and reused for subsequent inserts; the function is idempotent on the heading.
+
+The author-written `** Related Concepts` section in the body is the prose-level semantic description and remains the human-authored layer. `* Links` is the machine-maintained edge list. Both coexist by design — they serve different readers.
+
+The function deduplicates the heading but **not** the link paragraphs. Calling `roam_create_link A→B` twice produces two `[[id:B]]` paragraphs under `* Links`. Callers are responsible for not inserting duplicates.
+
+Example tail of a finished note:
+
+```org
+* References
+
+- [[https://example.com/spec][Spec]] | [[https://archive.today/...][archive]]
+
+* Links
+
+[[id:abcdef12-...][Related Concept A]]
+
+[[id:fedcba21-...][Related Concept B]]
+```
+
 ## 7. Complete Example
 
 ```org

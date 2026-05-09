@@ -72,11 +72,20 @@ Return a plist with :backlinks and :forward-links."
 
 ;;;###autoload
 (defun org-roam-skill-insert-link (source-file target-title)
-  "Insert a link to TARGET-TITLE note in SOURCE-FILE at the end.
-Return the inserted link text."
+  "Insert a link to TARGET-TITLE note in SOURCE-FILE under '* Links'.
+Ensure a top-level '* Links' heading exists at end of file before
+appending the link paragraph. Return the inserted link text."
   (let ((target-node (org-roam-node-from-title-or-alias target-title)))
     (when target-node
       (with-current-buffer (find-file-noselect source-file)
+        ;; Ensure a '* Links' heading exists.
+        (unless (save-excursion
+                  (goto-char (point-min))
+                  (re-search-forward "^\\* Links$" nil t))
+          (goto-char (point-max))
+          (unless (bolp) (insert "\n"))
+          (insert "\n* Links\n"))
+        ;; Append the link paragraph at end of file.
         (goto-char (point-max))
         (let ((link-text (org-link-make-string
                           (concat "id:" (org-roam-node-id target-node))

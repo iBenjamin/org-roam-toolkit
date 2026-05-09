@@ -167,7 +167,53 @@
     (it "handles empty database gracefully"
       (expect (org-roam-skill-test--count-nodes) :to-equal 0)
       (expect (org-roam-skill-list-all-tags) :to-equal nil)
-      (expect (org-roam-skill-search-by-title "anything") :to-equal nil))))
+      (expect (org-roam-skill-search-by-title "anything") :to-equal nil)))
+
+  ;;; Link Insertion Tests
+
+  (describe "org-roam-skill-insert-link-in-note"
+    (it "creates a '* Links' heading on first insertion"
+      (let* ((source-file (org-roam-skill-create-note "Source Note" :tags '("test")))
+             (_target (org-roam-skill-create-note "Target Note" :tags '("test"))))
+        (org-roam-skill-insert-link-in-note "Source Note" "Target Note")
+        (let ((content (org-roam-skill-test--get-note-content source-file)))
+          (expect (string-match-p "^\\* Links$" content) :to-be-truthy)
+          (expect (string-match-p "\\[\\[id:[^]]+\\]\\[Target Note\\]\\]" content)
+                  :to-be-truthy))))
+
+    (it "reuses an existing '* Links' heading on second insertion"
+      (let* ((source-file (org-roam-skill-create-note "Source 2" :tags '("test")))
+             (_t1 (org-roam-skill-create-note "Target A" :tags '("test")))
+             (_t2 (org-roam-skill-create-note "Target B" :tags '("test"))))
+        (org-roam-skill-insert-link-in-note "Source 2" "Target A")
+        (org-roam-skill-insert-link-in-note "Source 2" "Target B")
+        (let* ((content (org-roam-skill-test--get-note-content source-file))
+               (heading-count
+                (let ((count 0) (start 0))
+                  (while (string-match "^\\* Links$" content start)
+                    (setq count (1+ count)
+                          start (match-end 0)))
+                  count)))
+          (expect heading-count :to-equal 1)
+          (expect (string-match-p "Target A" content) :to-be-truthy)
+          (expect (string-match-p "Target B" content) :to-be-truthy))))
+
+    (it "does not duplicate '* Links' if file already contains one"
+      (let* ((source-file (org-roam-skill-create-note "Source 3" :tags '("test")))
+             (_t (org-roam-skill-create-note "Target C" :tags '("test"))))
+        ;; Pre-seed the file with a manually written '* Links' section.
+        (with-temp-buffer
+          (insert-file-contents source-file)
+          (goto-char (point-max))
+          (insert "\n* Links\n")
+          (write-region (point-min) (point-max) source-file))
+        (org-roam-skill-insert-link-in-note "Source 3" "Target C")
+        (let* ((content (org-roam-skill-test--get-note-content source-file))
+               (count 0) (start 0))
+          (while (string-match "^\\* Links$" content start)
+            (setq count (1+ count) start (match-end 0)))
+          (expect count :to-equal 1)
+          (expect (string-match-p "Target C" content) :to-be-truthy))))))
 
 (provide 'org-roam-skill-integration-test)
 ;;; org-roam-skill-integration-test.el ends here
