@@ -75,7 +75,9 @@ class OrgRoamToolkit < Formula
         ortk-agent-install claude
         ortk-agent-install codex
 
-      The installer links the plugin into ~/.claude/plugins for Claude Code.
+      The installer copies the plugin into ~/.claude/plugins/cache for Claude
+      Code, registers it in installed_plugins.json + known_marketplaces.json,
+      and writes a marketplace stub under ~/.claude/plugins/marketplaces.
       For Codex, it copies the plugin into ~/.codex/plugins/cache, enables
       [plugins."org-roam-toolkit@org-roam-toolkit"], and adds
       [mcp_servers.org-roam] to ~/.codex/config.toml, backing up an existing
