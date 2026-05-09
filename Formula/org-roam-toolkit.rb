@@ -60,6 +60,12 @@ class OrgRoamToolkit < Formula
   service do
     run [opt_bin/"ortk-dashboard", "--port=9876", "--host=127.0.0.1"]
     keep_alive true
+    # launchd-spawned services get a bare PATH (/usr/bin:/bin:/usr/sbin:/sbin),
+    # so the dashboard's child processes (ortk-emacs-eval, ortk-mcp, …) would
+    # not be found. Inject the Homebrew prefix and a couple of common dirs the
+    # dashboard probes might need (emacsclient lives in HOMEBREW_PREFIX/bin
+    # too, but users with a custom emacs install should adjust PATH manually).
+    environment_variables PATH: "#{HOMEBREW_PREFIX}/bin:#{HOMEBREW_PREFIX}/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
     log_path var/"log/org-roam-toolkit-dashboard.log"
     error_log_path var/"log/org-roam-toolkit-dashboard.err.log"
   end
