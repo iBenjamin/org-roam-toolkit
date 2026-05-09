@@ -17,7 +17,7 @@
 class OrgRoamToolkit < Formula
   desc "MCP server and Claude Code plugin for Emacs org-roam"
   homepage "https://github.com/iBenjamin/org-roam-toolkit"
-  url "https://github.com/iBenjamin/org-roam-toolkit/archive/refs/tags/v0.2.5.tar.gz"
+  url "https://github.com/iBenjamin/org-roam-toolkit/archive/refs/tags/v0.2.6.tar.gz"
   sha256 "1bf453830d3bf528e7d750a3db7c9ff57574c8287c7cfb8dfdf624e41b0e86db"
   license "MIT"
   head "https://github.com/iBenjamin/org-roam-toolkit.git", branch: "main"
@@ -49,7 +49,7 @@ class OrgRoamToolkit < Formula
     # The bash bin (emacs-eval) resolves elisp/ via $BASH_SOURCE → libexec.
     # The Node bins (fetch, ocr) resolve packages via libexec/node_modules.
     # The Rust bins are self-contained.
-    libexec.install Dir["*"], ".claude-plugin"
+    libexec.install Dir["*"]
 
     # --- Expose ortk-* bins on PATH ------------------------------------
     bin.install_symlink libexec/"packages/emacs/bin/emacs-eval" => "ortk-emacs-eval"
@@ -66,24 +66,23 @@ class OrgRoamToolkit < Formula
 
   def caveats
     <<~EOS
-      To enable Claude Code and Codex integrations:
+      The plugin source is published via GitHub. Install it through each
+      agent's plugin manager (this formula only ships the runtime binaries).
 
-        ortk-agent-install all
+      Claude Code — run inside a Claude Code session:
 
-      Or install one agent at a time:
+        /plugin marketplace add iBenjamin/org-roam-toolkit
+        /plugin install org-roam-toolkit@org-roam-toolkit
 
-        ortk-agent-install claude
-        ortk-agent-install codex
+      Codex — register the marketplace once, then add the MCP server:
 
-      The installer copies the plugin into ~/.claude/plugins/cache for Claude
-      Code, registers it in installed_plugins.json + known_marketplaces.json,
-      and writes a marketplace stub under ~/.claude/plugins/marketplaces.
-      For Codex, it copies the plugin into ~/.codex/plugins/cache, enables
-      [plugins."org-roam-toolkit@org-roam-toolkit"], and adds
-      [mcp_servers.org-roam] to ~/.codex/config.toml, backing up an existing
-      config before changing it.
+        codex plugin marketplace add iBenjamin/org-roam-toolkit
+        ortk-agent-install codex   # writes [mcp_servers.org-roam] to ~/.codex/config.toml
 
-      Restart Claude Code or Codex to load the plugin.
+      `ortk-agent-install codex` only edits ~/.codex/config.toml (Codex has no
+      CLI to register MCP servers). It backs up an existing config before
+      changing it. `ortk-agent-install claude` only cleans up legacy installs
+      and prints the slash-command instructions.
 
       To start the observability dashboard at login:
 
@@ -106,9 +105,8 @@ class OrgRoamToolkit < Formula
     assert_match version.to_s, shell_output("#{bin}/ortk-dashboard --version")
     assert_match "ortk-agent-install", shell_output("#{bin}/ortk-agent-install --help")
     with_env(HOME: testpath) do
-      assert_match "would cache",
-                   shell_output("#{bin}/ortk-agent-install all --dry-run --plugin-dir " \
-                                "#{opt_libexec}/plugins/org-roam-toolkit")
+      assert_match "/plugin marketplace add",
+                   shell_output("#{bin}/ortk-agent-install all --dry-run")
     end
     # ortk-emacs-eval --help works without a daemon
     assert_match "emacs-eval", shell_output("#{bin}/ortk-emacs-eval --help")

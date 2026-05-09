@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.6] - 2026-05-09
+
+### Changed
+- **Plugin distribution model**: each agent's plugin manager is now responsible for fetching the plugin source from GitHub. Homebrew only ships the runtime binaries.
+  - Claude Code: install with `/plugin marketplace add iBenjamin/org-roam-toolkit` and `/plugin install org-roam-toolkit@org-roam-toolkit` inside a session.
+  - Codex: install with `codex plugin marketplace add iBenjamin/org-roam-toolkit`, enable from `codex /plugins`, then run `ortk-agent-install codex` to write `[mcp_servers.org-roam]` and `[plugins."org-roam-toolkit@org-roam-toolkit"].enabled = true` into `~/.codex/config.toml`.
+- `ortk-agent-install claude` no longer writes a plugin cache or any JSON metadata into `~/.claude/plugins/` — Claude Code's `/plugin install` is the canonical entrypoint and it manages those files itself. The subcommand now only cleans up the legacy `~/.claude/plugins/org-roam-toolkit` symlink (left by 0.2.0–0.2.4) and prints the slash-command instructions.
+- `ortk-agent-install codex` no longer copies the plugin into `~/.codex/plugins/cache/` — `codex plugin marketplace add` does that. The subcommand now only edits `~/.codex/config.toml`.
+- The `--plugin-dir` flag is gone; the installer no longer needs to know where the plugin source lives.
+
+### Fixed
+- `/plugin marketplace add iBenjamin/org-roam-toolkit` no longer hits the schema error (`source.source: Invalid input`) that 0.2.5's hand-written `known_marketplaces.json` produced. We never write that file.
+
 ## [0.2.5] - 2026-05-09
 
 ### Fixed

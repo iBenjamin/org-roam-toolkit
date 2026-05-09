@@ -1,6 +1,6 @@
 {
   "name": "@org-roam-toolkit/web",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "description": "Playwright-based fetcher with site-strategy extraction and OCR helpers",
   "license": "MIT",
   "type": "module",
