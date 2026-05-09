@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.8] - 2026-05-09
+
+### Fixed
+- Dashboard probe no longer leaks `emacsclient` processes when the Emacs daemon's eval queue hangs. Two combined bugs caused 3 orphaned `emacsclient` processes per probe cycle (~18/min):
+  - Wrapper `emacs_daemon_running` had no timeout, so it sat forever on a hung daemon. Replaced with portable bash 3.2 `_emacs_run` helper carrying `EMACS_PROBE_TIMEOUT` (default 2s) and `EMACS_EVAL_TIMEOUT` (default 30s); watcher subshell I/O is redirected to `/dev/null` so its orphaned `sleep` cannot keep the parent's stdout pipe open past wrapper exit.
+  - Dashboard sent `SIGKILL` only to the direct child wrapper; `SIGKILL` is uncatchable and doesn't propagate to grandchildren. The dashboard now spawns the wrapper into its own process group and `kill(-pgid, SIGKILL)` on timeout so wrapper and `emacsclient` die atomically.
+- `bin/emacs-eval` installs `INT/TERM/EXIT` traps that propagate clean termination to the in-flight `emacsclient` subprocess.
+
 ## [0.2.7] - 2026-05-09
 
 ### Fixed
