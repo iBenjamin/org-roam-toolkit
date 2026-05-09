@@ -31,6 +31,14 @@ ELISP_ROOT="$EMACS_PKG_ROOT/elisp"
 # shellcheck source=../lib/emacs-client.sh
 source "$EMACS_PKG_ROOT/lib/emacs-client.sh"
 
+# Propagate termination signals to the in-flight emacsclient subprocess.
+# Without this, a wrapper killed by SIGTERM (e.g., dashboard probe timeout)
+# leaves emacsclient orphaned to PID 1, blocked forever on a hung daemon.
+# (SIGKILL is uncatchable; the dashboard-server side handles that case by
+# spawning us in a dedicated process group and killing the whole group.)
+trap '_emacs_kill_child; exit 130' INT TERM
+trap '_emacs_kill_child' EXIT
+
 usage() {
     cat <<'EOF'
 emacs-eval — universal wrapper for emacsclient that auto-loads a project's elisp package.
@@ -85,4 +93,4 @@ if [[ -n "$PKG" && "$PKG" != "claude-skill-base" ]]; then
     emacs_ensure_pkg "$PKG" "$LOAD_PATH"
 fi
 
-emacsclient --eval "$EXPR"
+_emacs_run "$EMACS_EVAL_TIMEOUT" --eval "$EXPR"

@@ -4,11 +4,11 @@
 //! return a JSON-encoded string (via `claude-skill-json-encode`), strips
 //! the outer elisp string quoting, and parses the JSON.
 
+use std::process::Stdio;
 use std::time::Duration;
 
 use serde_json::Value;
 use tokio::process::Command;
-use tokio::time::timeout;
 
 const PROBE_TIMEOUT: Duration = Duration::from_secs(5);
 
@@ -22,21 +22,43 @@ async fn eval_pkg_json_with_program(
     expr: &str,
     probe_timeout: Duration,
 ) -> Result<Value, String> {
-    let fut = Command::new(program)
+    // Spawn into a fresh process group so we can SIGKILL the whole tree on
+    // timeout. Without this, killing only the direct child (the wrapper
+    // shell) leaves its emacsclient grandchild orphaned to PID 1 — when
+    // the daemon's eval queue is hung, every probe cycle leaks 3 of them.
+    let child = Command::new(program)
         .arg(format!("--pkg={pkg}"))
         .arg(expr)
-        .kill_on_drop(true)
-        .output();
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .process_group(0)
+        .spawn()
+        .map_err(|e| format!("failed to spawn {program}: {e}"))?;
 
-    let output = timeout(probe_timeout, fut)
-        .await
-        .map_err(|_| {
-            format!(
+    let pid = child
+        .id()
+        .ok_or_else(|| format!("{program} has no pid"))? as i32;
+
+    let wait_fut = child.wait_with_output();
+    tokio::pin!(wait_fut);
+
+    let output = tokio::select! {
+        res = &mut wait_fut => {
+            res.map_err(|e| format!("waiting on {program}: {e}"))?
+        }
+        _ = tokio::time::sleep(probe_timeout) => {
+            // SIGKILL -PGID kills the wrapper bash AND its emacsclient
+            // grandchild atomically; bash's own SIGTERM trap (if it ran)
+            // would also clean up, but we don't depend on it.
+            unsafe { libc::kill(-pid, libc::SIGKILL) };
+            // Drain the future so the kernel reaps our zombie child.
+            let _ = wait_fut.await;
+            return Err(format!(
                 "{program} timed out after {}",
                 format_duration(probe_timeout)
-            )
-        })?
-        .map_err(|e| format!("failed to spawn {program}: {e}"))?;
+            ));
+        }
+    };
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
@@ -127,19 +149,30 @@ mod tests {
 
     #[tokio::test]
     async fn kills_probe_child_when_timeout_fires() {
+        // Regression test for the leak that motivated process_group(0):
+        // the wrapper shell spawns a long-running grandchild (emacsclient,
+        // simulated here with `sleep`); when the probe times out, the
+        // *whole tree* must die — killing only the direct child reparents
+        // grandchildren to PID 1, which is the bug we're fixing.
         let nonce = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .expect("clock before unix epoch")
             .as_nanos();
         let dir = std::env::temp_dir();
         let script_path = dir.join(format!("ortk-elisp-timeout-{nonce}.sh"));
-        let pid_path = dir.join(format!("ortk-elisp-timeout-{nonce}.pid"));
+        let parent_pid_path = dir.join(format!("ortk-elisp-timeout-{nonce}.parent"));
+        let child_pid_path = dir.join(format!("ortk-elisp-timeout-{nonce}.child"));
 
         fs::write(
             &script_path,
             format!(
-                "#!/bin/sh\nprintf '%s\\n' $$ > {}\nwhile true; do sleep 1; done\n",
-                pid_path.display()
+                "#!/bin/sh\n\
+                 printf '%s\\n' $$ > {parent}\n\
+                 sleep 600 &\n\
+                 printf '%s\\n' $! > {child}\n\
+                 wait\n",
+                parent = parent_pid_path.display(),
+                child = child_pid_path.display(),
             ),
         )
         .expect("write timeout script");
@@ -161,13 +194,15 @@ mod tests {
         });
 
         let readiness_deadline = Instant::now() + Duration::from_secs(2);
-        while !pid_path.exists() && Instant::now() < readiness_deadline {
+        while !(parent_pid_path.exists() && child_pid_path.exists())
+            && Instant::now() < readiness_deadline
+        {
             sleep(Duration::from_millis(25)).await;
         }
 
         assert!(
-            pid_path.exists(),
-            "timeout script did not write its pid before the readiness deadline"
+            parent_pid_path.exists() && child_pid_path.exists(),
+            "timeout script did not write both pids before the readiness deadline"
         );
 
         let result = probe.await.expect("probe task panicked");
@@ -176,22 +211,39 @@ mod tests {
             .expect_err("probe should time out")
             .contains("timed out"));
 
-        let pid = fs::read_to_string(&pid_path).expect("read child pid");
         sleep(Duration::from_millis(250)).await;
-        let still_alive = Command::new("kill")
+
+        let parent_pid = fs::read_to_string(&parent_pid_path).expect("read parent pid");
+        let child_pid = fs::read_to_string(&child_pid_path).expect("read child pid");
+        let parent_alive = is_alive(parent_pid.trim());
+        let child_alive = is_alive(child_pid.trim());
+
+        // Best-effort cleanup before assertions, so a failed test doesn't
+        // leak `sleep 600` processes.
+        if parent_alive {
+            let _ = Command::new("kill").arg("-9").arg(parent_pid.trim()).status();
+        }
+        if child_alive {
+            let _ = Command::new("kill").arg("-9").arg(child_pid.trim()).status();
+        }
+        let _ = fs::remove_file(&script_path);
+        let _ = fs::remove_file(&parent_pid_path);
+        let _ = fs::remove_file(&child_pid_path);
+
+        assert!(!parent_alive, "timed-out wrapper shell stayed alive");
+        assert!(
+            !child_alive,
+            "timed-out wrapper grandchild (emacsclient simulator) stayed alive — process group leak"
+        );
+    }
+
+    fn is_alive(pid: &str) -> bool {
+        Command::new("kill")
             .arg("-0")
-            .arg(pid.trim())
+            .arg(pid)
             .stderr(Stdio::null())
             .status()
             .map(|status| status.success())
-            .unwrap_or(false);
-        if still_alive {
-            let _ = Command::new("kill").arg("-9").arg(pid.trim()).status();
-        }
-
-        let _ = fs::remove_file(&script_path);
-        let _ = fs::remove_file(&pid_path);
-
-        assert!(!still_alive, "timed-out ortk-emacs-eval child stayed alive");
+            .unwrap_or(false)
     }
 }
