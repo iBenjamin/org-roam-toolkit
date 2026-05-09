@@ -49,9 +49,12 @@ Loading is automatic — `ortk-emacs-eval --pkg=<name>` finds it by directory co
 3. (Optional) `mkdir scripts/` with one-line bash wrappers that pre-apply common flags. Wrappers should be plain `exec ortk-... "$@"` — no path-traversal tricks.
 4. `chmod +x plugins/org-roam-toolkit/skills/<name>/scripts/<short-name>`
 
-A skill should not contain `.ts` or `.el` files. Agents discover the whole `plugins/org-roam-toolkit/` directory after it is installed into their plugin locations: use `make install-claude`, `make install-codex`, or `make install-agents` in dev, and use `ortk-agent-install claude`, `ortk-agent-install codex`, or `ortk-agent-install all` after a Homebrew install.
+A skill should not contain `.ts` or `.el` files. Agents discover the whole `plugins/org-roam-toolkit/` directory after it has been installed via each agent's plugin manager:
 
-Codex does not discover top-level `~/.codex/plugins/<name>` links. The installer copies the plugin into `~/.codex/plugins/cache/org-roam-toolkit/org-roam-toolkit/local` and enables `[plugins."org-roam-toolkit@org-roam-toolkit"]` in `~/.codex/config.toml`.
+- **Claude Code**: `/plugin marketplace add iBenjamin/org-roam-toolkit` + `/plugin install org-roam-toolkit@org-roam-toolkit` (in a session). Claude Code writes its own cache under `~/.claude/plugins/cache/...` — do not hand-edit it.
+- **Codex**: `codex plugin marketplace add iBenjamin/org-roam-toolkit` (in a shell) + enable from `codex /plugins`. Then `ortk-agent-install codex` writes `[mcp_servers.org-roam]` and `[plugins."org-roam-toolkit@..."].enabled = true` into `~/.codex/config.toml` — Codex does not auto-register MCP servers from the plugin's manifest.
+
+For day-to-day skill development against the local checkout, use `make install-codex` to push the latest TOML, then trigger Codex to reload. Claude Code's `/plugin install` reads the published GitHub tag, so iterate by pushing branches and using `--ref` if needed.
 
 ## Adding a new web site handler
 

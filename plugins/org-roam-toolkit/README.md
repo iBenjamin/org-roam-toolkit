@@ -7,7 +7,7 @@ End-to-end org-roam workflows for Claude Code and Codex.
 - **Claude Code commands** (`commands/`) — 9 slash commands: `/note`, `/study`, `/deep_note`, `/reference`, `/ref-extract`, `/to-read`, `/read-history`, `/add-toolkit`, `/gen-commit-msg`
 - **Agent skills** (`skills/`) — `atomic-notes` (format spec), `org` (agenda + capture), `org-roam` (note management), `fetch` (playwright + OCR), `dashboard` (observability)
 - **Claude MCP server registration** (`.mcp.json`) — registers the `org-roam` MCP server backed by the Homebrew-installed `ortk-mcp` bin
-- **Codex plugin manifest** (`.codex-plugin/plugin.json`) — points Codex at `./skills/`; `ortk-agent-install codex` copies the plugin into Codex's cache, enables it in `~/.codex/config.toml`, and writes the MCP registration
+- **Codex plugin manifest** (`.codex-plugin/plugin.json`) — points Codex at `./skills/`. The plugin source itself is fetched by `codex plugin marketplace add iBenjamin/org-roam-toolkit`; `ortk-agent-install codex` only writes the `[mcp_servers.org-roam]` and plugin-enable entries into `~/.codex/config.toml`
 
 ## Runtime requirements
 
@@ -30,12 +30,13 @@ You also need a running Emacs daemon with `org-roam` loaded.
 brew tap iBenjamin/tap
 brew install org-roam-toolkit
 
-# 2. Install the plugin for Claude Code and Codex
-ortk-agent-install all
+# 2. Claude Code plugin (run inside a Claude Code session)
+/plugin marketplace add iBenjamin/org-roam-toolkit
+/plugin install org-roam-toolkit@org-roam-toolkit
 
-# Optional: install only one agent integration
-ortk-agent-install claude
-ortk-agent-install codex
+# 3. Codex plugin
+codex plugin marketplace add iBenjamin/org-roam-toolkit
+ortk-agent-install codex   # writes [mcp_servers.org-roam] to ~/.codex/config.toml
 ```
 
 See the repo root README for the full setup, including dashboard autostart via `brew services`.

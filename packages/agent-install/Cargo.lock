@@ -375,12 +375,11 @@ checksum = "384b8ab6d37215f3c5301a95a4accb5d64aa607f1fcb26a11b5303878451b4fe"
 
 [[package]]
 name = "ortk-agent-install"
-version = "0.2.5"
+version = "0.2.6"
 dependencies = [
  "anyhow",
  "chrono",
  "clap",
- "serde_json",
  "tempfile",
 ]
 
@@ -484,7 +483,6 @@ version = "1.0.149"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "83fc039473c5595ace860d8c4fafa220ff474b3fc6bfdb4293327f1a37e94d86"
 dependencies = [
- "indexmap",
  "itoa",
  "memchr",
  "serde",

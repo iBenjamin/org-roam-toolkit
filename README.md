@@ -6,25 +6,32 @@ macOS only.
 
 ## Install
 
+Three steps: Homebrew ships the binaries; each agent's own plugin manager pulls
+the plugin source from this repo.
+
 ```bash
-# 1. Install the bins via Homebrew
+# 1. Install the runtime bins
 brew tap iBenjamin/tap
 brew install org-roam-toolkit
 
-# 2. Install the agent plugin for Claude Code and Codex
-ortk-agent-install all
+# 2. Install the Claude Code plugin (run inside a Claude Code session)
+/plugin marketplace add iBenjamin/org-roam-toolkit
+/plugin install org-roam-toolkit@org-roam-toolkit
 
-# Optional: install only one agent integration
-ortk-agent-install claude
-ortk-agent-install codex
+# 3. Install the Codex plugin (run in a shell, then enable in `codex /plugins`)
+codex plugin marketplace add iBenjamin/org-roam-toolkit
+ortk-agent-install codex   # writes [mcp_servers.org-roam] to ~/.codex/config.toml
 
-# 3. (optional) Auto-start the dashboard at login
+# Optional: auto-start the dashboard at login
 brew services start org-roam-toolkit       # http://127.0.0.1:9876
 ```
 
-`ortk-agent-install` links the Claude plugin into `~/.claude/plugins`. For Codex, it copies the plugin into Codex's plugin cache, enables `[plugins."org-roam-toolkit@org-roam-toolkit"]`, and adds `[mcp_servers.org-roam]` to `~/.codex/config.toml`; when an existing Codex config would change, the installer writes a timestamped backup first.
-
-After step 2, restart Claude Code or Codex to load the plugin.
+`ortk-agent-install codex` only edits `~/.codex/config.toml` — Codex has no CLI
+to register MCP servers, so the installer writes `[mcp_servers.org-roam]` and
+flips `[plugins."org-roam-toolkit@org-roam-toolkit"].enabled = true`. It backs
+up an existing config before changing it. `ortk-agent-install claude` only
+cleans up legacy installs from older versions and prints the slash-command
+instructions; Claude Code itself manages the plugin cache via `/plugin`.
 
 ## What you get
 
