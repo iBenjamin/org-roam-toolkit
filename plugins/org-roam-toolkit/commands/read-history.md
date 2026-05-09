@@ -1,22 +1,22 @@
 ---
-description: 将已读文章加入阅读历史
+description: Add a read article to reading history
 argument-hint: <url>
 ---
 
-用户已经阅读了这篇文章，加入阅读历史（季度文件 `read_history/YYYY-QN.org`，**不是** org-roam 节点）。
+The user has already read this article and wants to add it to reading history. The entry goes into quarterly files under `read_history/YYYY-QN.org`; it is NOT an org-roam node.
 
 URL: $ARGUMENTS
 
-## 步骤
+## Steps
 
-1. 使用 `fetch` skill 获取文章内容（微信文章自动走 wechat 站点策略）
-2. 调用 `roam_add_reading_history` MCP tool：
-   - `title`: 文章标题
-   - `url`: `$ARGUMENTS`
-   - `tags`: 分类标签
-   - `source`: 网站名（`cnblogs`、`github`、`weixin` 等）
-   - `author`: 作者名（如果抓得到）
-   - `summary`: 一句话摘要（如果文章为空，例如整篇是图片，**不传** `summary`）
-   - `points`: 关键要点列表（2-5 条）
-   - `rating`: 1-5 评分（可选）
-3. 确认添加成功，返回季度文件中的位置
+1. Use the `fetch` skill to fetch the article. WeChat articles automatically use the WeChat site strategy.
+2. Call the `roam_add_reading_history` MCP tool:
+   - `title`: article title.
+   - `url`: `$ARGUMENTS`.
+   - `tags`: classification tags.
+   - `source`: website name, for example `cnblogs`, `github`, or `weixin`.
+   - `author`: author name, if available.
+   - `summary`: one-sentence summary. If the article is empty, such as an image-only article, omit `summary`.
+   - `points`: list of 2-5 key points.
+   - `rating`: 1-5 rating, optional.
+3. Confirm the entry was added and return its location in the quarterly file.

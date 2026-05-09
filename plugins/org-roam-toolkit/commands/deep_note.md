@@ -1,57 +1,57 @@
 ---
-description: 对一个概念创建原子笔记，并对其 1 级相关概念也创建原子笔记
-argument-hint: <概念名称>
+description: Create an atomic concept note plus first-degree related concept notes
+argument-hint: <concept name>
 ---
 
-用户要为一个概念及其直接相关概念创建原子笔记网络。
+The user wants to create a small atomic-note network for a concept and its directly related concepts.
 
-概念：$ARGUMENTS
+Concept: $ARGUMENTS
 
-**所有格式 / References / AI 标记 / 织入图谱规范**：见 `atomic-notes` skill。1 级相关概念的判定标准也在那里（"织入图谱原则"小节）。
+**Format, References, AI marking, and graph-linking rules**: follow the `atomic-notes` skill. The criteria for first-degree related concepts are in its "Graph-Linking Rules" section.
 
-## 第一步：理解核心概念 & 识别 1 级相关
+## Step 1: Understand the core concept and identify first-degree related concepts
 
-基于你对该概念的深度理解：
-1. 核心概念本身的本质定义
-2. 该概念的 1 级相关概念（按 `atomic-notes` skill 判定标准，3-7 个）
+Use your understanding of the concept to identify:
+1. The essential definition of the core concept.
+2. The concept's first-degree related concepts, using the `atomic-notes` criteria. Aim for 3-7 high-value concepts.
 
-## 第二步：批量查重
+## Step 2: Batch duplicate check
 
-对核心概念和所有 1 级相关概念，调用 `roam_search_title` 检查是否已存在。
-- 已存在：记录用于后续建立链接（不重复创建）
-- 不存在：记录待新建
+For the core concept and every first-degree related concept, call `roam_search_title`.
+- Existing note: record it for later linking. Do not create a duplicate.
+- Missing note: record it for creation.
 
-## 第三步：创建核心概念笔记
+## Step 3: Create the core concept note
 
-调用 `roam_create_note`：
-- `title`、`subdirectory: "main"`、`tags`、AI 标记 properties：按 `atomic-notes` skill
-- `content`：按 `atomic-notes` skill 规范，**额外包含**：
-  - 一句话本质定义
-  - 核心要点展开
-  - "相关概念"段落：列出所有 1 级相关概念，使用 `[[id:xxx]]` 链接格式
-  - 关键代码/数据示例（如有）
-  - References（用 WebSearch 搜索权威来源，至少 2-3 条）
+Call `roam_create_note`:
+- `title`, `subdirectory: "main"`, `tags`, and AI-marking properties: follow `atomic-notes`.
+- `content`: follow `atomic-notes`, and additionally include:
+  - One-sentence essential definition.
+  - Expanded key points.
+  - A "Related Concepts" section listing all first-degree related concepts with `[[id:xxx]]` links when IDs are known.
+  - Important code or data examples when relevant.
+  - References from authoritative sources found with WebSearch, at least 2-3 sources.
 
-## 第四步：创建 1 级相关概念笔记
+## Step 4: Create first-degree related concept notes
 
-对每个需要新建的 1 级相关概念，调用 `roam_create_note`：
-- 同核心概念笔记的格式规范
-- 但**不再递归展开**其相关概念段落（避免无限递归）
+For each missing first-degree related concept, call `roam_create_note`:
+- Use the same format as the core concept note.
+- Do not recursively expand its own related-concepts section. This prevents unbounded note creation.
 
-## 第五步：织入知识图谱
+## Step 5: Link into the knowledge graph
 
-按 `atomic-notes` skill 的"织入图谱原则"：
-1. 核心概念 ↔ 每个 1 级相关概念（双向）
-2. 1 级相关概念之间有逻辑关联的互相链接
-3. `roam_search_title` / `roam_search_tag` 找已有笔记建立链接
+Follow the "Graph-Linking Rules" section in `atomic-notes`:
+1. Core concept <-> each first-degree related concept.
+2. First-degree related concepts <-> each other when there is a meaningful relationship.
+3. Use `roam_search_title` / `roam_search_tag` to find and link existing related notes.
 
-## 第六步：提交 archive.today
+## Step 6: Submit to archive.today
 
-按 `atomic-notes` skill 的"提交 archive.today"小节，收集所有新建笔记 References URL 逐条 `browse-url`，间隔 1 秒。
+Follow the "Submit to archive.today" section in `atomic-notes`: collect Reference URLs from every new note and open each archive.today submission page with `browse-url`, waiting one second between URLs.
 
-## 第七步：输出摘要
+## Step 7: Return a summary
 
-- 核心概念笔记路径
-- 新建的 1 级相关概念笔记列表
-- 跳过的已有笔记
-- 建立的链接关系图
+- Core concept note path.
+- Newly created first-degree related concept notes.
+- Existing notes skipped.
+- Link graph created.

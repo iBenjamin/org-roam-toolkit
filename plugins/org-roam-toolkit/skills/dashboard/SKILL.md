@@ -1,11 +1,11 @@
 ---
 name: dashboard
 description: |
-  Local observability dashboard for the org-roam-toolkit monorepo. Shows Emacs
-  daemon health, MCP server status, org-roam config and graph stats in a web UI.
+  Use when checking org-roam-toolkit local dashboard health, Emacs daemon status,
+  MCP server status, org-roam config, or graph stats.
 
   Triggers: dashboard, daemon health, mcp status, org-roam stats, observability,
-  状态, 监控, 看板, daemon 死了, server 没反应
+  health check, monitoring, daemon down, server unresponsive
 ---
 
 # Dashboard Skill
@@ -19,7 +19,7 @@ Local web dashboard at `http://127.0.0.1:9876` showing four cards:
 | **org-roam Config** | `org-roam-directory`, db path/size, subdirectories |
 | **Graph Stats** | nodes, edges, orphans, tags |
 
-Refreshes every 5 seconds. Each card turns red and shows the underlying error message when its probe fails — handy for diagnosing "daemon died" / "MCP can't start" without leaving the browser.
+Refreshes every 5 seconds. Each card turns red and shows the underlying error message when its probe fails, which helps diagnose "daemon died" or "MCP can't start" without leaving the browser.
 
 ## Starting the dashboard
 
@@ -61,7 +61,7 @@ Every response is a `Probe<T>` envelope:
 }
 ```
 
-…or on failure:
+Or on failure:
 
 ```json
 { "status": "down", "error": "<reason>", "probedAt": "..." }
@@ -69,7 +69,7 @@ Every response is a `Probe<T>` envelope:
 
 ## Same data via MCP resources
 
-The `ortk-mcp` server (registered as `org-roam` in `mcp.json`) also exposes the same probes as MCP **resources**, so when chatting with Claude Desktop/Code you can ask the model to read them directly:
+The `ortk-mcp` server (registered as `org-roam` in `mcp.json`) also exposes the same probes as MCP resources, so when chatting with Claude Desktop/Code you can ask the model to read them directly:
 
 | URI | Same as |
 |---|---|
@@ -80,7 +80,7 @@ The `ortk-mcp` server (registered as `org-roam` in `mcp.json`) also exposes the 
 
 ## Implementation notes
 
-- Backend: `@org-roam-toolkit/dashboard-server` (hono, ~150 LOC). Loopback only (`127.0.0.1`); no auth.
+- Backend: `@org-roam-toolkit/dashboard-server` (hono, about 150 LOC). Loopback only (`127.0.0.1`); no auth.
 - UI: Svelte 5 + Vite, single-page, dark theme.
 - Probes: `@org-roam-toolkit/emacs` exports `probeDaemon`, `probeRoamConfig`, `probeGraphStats`. The MCP probe spawns and handshakes with `ortk-mcp`.
 - Probe results are cached for 5 seconds per name; clients polling at 5s get fresh data on each cycle without thundering-herd risk.

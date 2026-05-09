@@ -1,68 +1,68 @@
 ---
-description: 深度学习一篇文章：保存 reference + 创建原子笔记 + 织入知识图谱
+description: Study an article deeply by saving a reference note, creating atomic notes, and linking the graph
 argument-hint: <url>
 ---
 
-用户要深度学习这篇文章。需要完成两件事：
-1. 将文章蒸馏为 reference 笔记
-2. 从文章中提炼原子概念，创建独立笔记，织入知识图谱
+The user wants to study this article deeply. Complete two jobs:
+1. Distill the article into a reference note.
+2. Extract atomic concepts from the article, create standalone notes, and link them into the knowledge graph.
 
 URL: $ARGUMENTS
 
-**所有格式 / References / AI 标记 / 织入图谱规范**：见 `atomic-notes` skill。
+**Format, References, AI marking, and graph-linking rules**: follow the `atomic-notes` skill.
 
-## 第一步：获取文章内容
+## Step 1: Fetch the article
 
-使用 `fetch` skill 获取文章全文（微信文章会自动走 wechat 站点策略）。
+Use the `fetch` skill to fetch the full article. WeChat articles automatically use the WeChat site strategy.
 
-## 第二步：创建 Reference 笔记
+## Step 2: Create the reference note
 
-对文章进行知识蒸馏：
-- 提炼核心概念和关键洞察
-- 用 org-mode 格式重构（标题层级、代码块、表格等）
-- 保留关键代码示例和数据
-- 去除废话和冗余，只留干货
+Distill the article:
+- Extract core concepts and key insights.
+- Restructure into org-mode format with headings, code blocks, tables, and other useful structure.
+- Preserve important code examples and data.
+- Remove fluff and redundancy while keeping the substance.
 
-调用 `roam_create_note`：
-- `title`: 文章原标题（禁止 AI 改写或精炼，保持原文标题）
-- `subdirectory`: `"reference"`
-- `sourceUrl`: 原始 URL
-- `tags`: 包含分类标签 + AI 生成标签（按 `atomic-notes` skill 规范）
-- `properties`: 按 `atomic-notes` skill "AI 生成内容标记" 小节
-- `content`: 蒸馏后的 org-mode 内容（reference 笔记不强制 :ZH: drawer 双语化，保留原文语言）
+Call `roam_create_note`:
+- `title`: original article title. Do not rewrite or polish it.
+- `subdirectory`: `"reference"`.
+- `sourceUrl`: original URL.
+- `tags`: classification tags plus AI-generated tag, following `atomic-notes`.
+- `properties`: follow the "AI-Generated Content Marking" section in `atomic-notes`.
+- `content`: distilled org-mode content. Reference notes should preserve the source language when that matters; do not force translation.
 
-## 第三步：识别原子概念
+## Step 3: Identify atomic concepts
 
-从文章内容中识别值得独立成笔记的核心概念：
-- 每个概念必须是独立的知识单元，脱离原文仍有意义
-- 宁少勿多，只提炼真正有价值的概念（通常 2-5 个）
-- 概念粒度：一个概念 = 一句话能说清本质 + 几个要点展开
+Identify core concepts worth standalone notes:
+- Each concept must be an independent knowledge unit that still makes sense outside the source article.
+- Prefer fewer, higher-value concepts. Usually 2-5 concepts.
+- A concept should be explainable with one essential sentence plus a few supporting points.
 
-## 第四步：查重 & 创建原子笔记
+## Step 4: Check duplicates and create atomic notes
 
-对每个识别出的概念：
+For each identified concept:
 
-1. `roam_search_title` 查重
-2. 已存在：跳过创建，但记录下来用于后续链接
-3. 不存在：调用 `roam_create_note`：
-   - `subdirectory`: `"main"`
-   - `tags`: 分类标签 + AI 生成标签
-   - 全部按 `atomic-notes` skill 规范：双语标题、:ZH: drawer、双层 References、AI 标记
+1. Run `roam_search_title`.
+2. Existing note: skip creation, but record it for later linking.
+3. Missing note: call `roam_create_note`:
+   - `subdirectory`: `"main"`.
+   - `tags`: classification tags plus AI-generated tag.
+   - Follow all `atomic-notes` rules: English title, English prose, two-layer References, and AI marking.
 
-## 第五步：织入知识图谱
+## Step 5: Link into the knowledge graph
 
-按 `atomic-notes` skill 的"织入图谱原则"：
-1. 每个原子笔记 ↔ reference 笔记（双向）
-2. 相关原子笔记之间互相链接
-3. `roam_search_title` / `roam_search_tag` 找已有相关笔记建立链接
+Follow the "Graph-Linking Rules" section in `atomic-notes`:
+1. Each atomic note <-> reference note.
+2. Related atomic notes <-> each other.
+3. Use `roam_search_title` / `roam_search_tag` to find and link existing related notes.
 
-## 第六步：提交 archive.today
+## Step 6: Submit to archive.today
 
-收集所有 References URL，按 `atomic-notes` skill 的"提交 archive.today"小节执行。
+Collect all Reference URLs and follow the "Submit to archive.today" section in `atomic-notes`.
 
-## 第七步：输出摘要
+## Step 7: Return a summary
 
-- Reference 笔记路径
-- 新建原子笔记列表（标题 + 路径）
-- 建立的链接关系
-- 跳过的已有笔记（如有）
+- Reference note path.
+- Newly created atomic notes, including title and path.
+- Links created.
+- Existing notes skipped, if any.

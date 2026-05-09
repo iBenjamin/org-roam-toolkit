@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.4] - 2026-05-09
+
+### Added
+- Added a root `VERSION` file so release tooling and humans can track the current project version without parsing package manifests.
+
+### Changed
+- Converted the org-roam toolkit skills and Claude slash commands from Chinese-facing copy to English-facing copy for broader international use.
+- Updated the atomic-note workflow to default to English titles, English tags, and English prose, while keeping translated/local-language drawers optional when explicitly requested.
+- Reading-history entries now use English `original` / `archive` link labels.
+
 ## [0.2.3] - 2026-05-09
 
 ### Fixed

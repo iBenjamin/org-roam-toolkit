@@ -41,7 +41,9 @@ Plus the agent plugin under `plugins/org-roam-toolkit/`, usable from Claude Code
 - **9 Claude Code slash commands** — `/note`, `/study`, `/deep_note`, `/reference`, `/ref-extract`, `/to-read`, `/read-history`, `/add-toolkit`, `/gen-commit-msg`
 - **5 agent skills** — `atomic-notes` (format spec), `org` (agenda + capture), `org-roam` (note management), `fetch` (web + OCR), `dashboard` (observability)
 
-The slash commands are **Claude-specific, Chinese-language, and opinionated** — they encode a specific atomic-notes / Zettelkasten workflow. See `plugins/org-roam-toolkit/skills/atomic-notes/SKILL.md` for the format spec.
+The slash commands are **Claude-specific, English-language, and opinionated** — they encode a specific atomic-notes / Zettelkasten workflow. See `plugins/org-roam-toolkit/skills/atomic-notes/SKILL.md` for the format spec.
+
+The current release version is tracked in the root `VERSION` file and mirrored into the package, plugin, and crate manifests during release.
 
 ## Runtime requirements
 

@@ -1,42 +1,42 @@
 ---
-description: 创建一个概念的原子笔记，织入知识图谱
-argument-hint: <概念名称>
+description: Create an atomic concept note and link it into the knowledge graph
+argument-hint: <concept name>
 ---
 
-用户要为一个概念创建原子笔记。
+The user wants to create an atomic note for a concept.
 
-概念：$ARGUMENTS
+Concept: $ARGUMENTS
 
-**所有格式 / References / AI 标记 / 织入图谱规范**：见 `atomic-notes` skill。本 command 只描述工作流。
+**Format, References, AI marking, and graph-linking rules**: follow the `atomic-notes` skill. This command only defines the workflow.
 
-## 第一步：查重
+## Step 1: Check for duplicates
 
-调用 `roam_search_title` 检查是否已存在同名或近似笔记。
-- 已存在：告知用户，询问是否补充/更新（不自动覆盖）
-- 不存在：继续
+Call `roam_search_title` to check whether the same or a near-same note already exists.
+- If it exists: tell the user and ask whether to supplement/update it. Do not overwrite automatically.
+- If it does not exist: continue.
 
-## 第二步：创建原子笔记
+## Step 2: Create the atomic note
 
-调用 `roam_create_note`：
-- `title`: 按 `atomic-notes` skill 的双语标题规范
-- `subdirectory`: `"main"`
-- `tags`: 分类标签
-- `content`: 按 `atomic-notes` skill 的双语内容规范，包含 References 双层结构
-- 标记 AI 生成（按 `atomic-notes` skill 的 Properties + FILETAGS 规范）
+Call `roam_create_note`:
+- `title`: follow the English title format in `atomic-notes`.
+- `subdirectory`: `"main"`.
+- `tags`: classification tags.
+- `content`: follow the English content format in `atomic-notes`, including the two-layer References structure.
+- Mark AI-generated content using the Properties + FILETAGS rules in `atomic-notes`.
 
-References 必须真实——用 `WebSearch` 搜索该概念的权威来源，至少 2-3 条。
+References must be real. Use `WebSearch` to find at least 2-3 authoritative sources for the concept.
 
-## 第三步：织入知识图谱
+## Step 3: Link into the knowledge graph
 
-按 `atomic-notes` skill 的"织入图谱原则"：
-1. `roam_search_title` / `roam_search_tag` 找已有相关笔记
-2. `roam_create_link` 双向链接
+Follow the "Graph-Linking Rules" section in `atomic-notes`:
+1. Use `roam_search_title` / `roam_search_tag` to find related existing notes.
+2. Use `roam_create_link` to create bidirectional links.
 
-## 第四步：提交 archive.today
+## Step 4: Submit to archive.today
 
-按 `atomic-notes` skill 的"提交 archive.today"小节，收集 References 中所有原始 URL，逐条 `emacsclient -e '(browse-url "...")'`，每条间隔 1 秒。
+Follow the "Submit to archive.today" section in `atomic-notes`: collect every original URL from References and open each archive.today submission page with `emacsclient -e '(browse-url "...")'`, waiting one second between URLs.
 
-## 第五步：输出摘要
+## Step 5: Return a summary
 
-- 笔记路径
-- 建立的链接关系（数量 + 关键节点名）
+- Note path.
+- Links created, including count and important target node names.

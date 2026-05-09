@@ -1,100 +1,100 @@
 ---
 name: fetch
 description: |
-  Playwright headless browser for fetching web pages that require JavaScript rendering.
-  Use when WebFetch fails or returns empty content. Includes per-site extraction strategy
-  (WeChat 图文 with image extraction, archive.* with extended timeout) and OCR helpers.
+  Use when WebFetch fails, returns empty content, or a page requires JavaScript rendering;
+  also when fetching WeChat posts, archive.* pages, or OCR-ing fetched images.
 
-  Triggers: WebFetch失败, 微信公众号, mp.weixin.qq.com, 需要JS渲染, archive.today, archive.ph
+  Triggers: WebFetch failure, empty content, JavaScript rendering, WeChat post,
+  mp.weixin.qq.com, archive.today, archive.ph, OCR
 ---
 
 # Fetch Skill
 
-抓取需要 JavaScript 渲染的网页，并按域名自动选择提取策略。
+Fetch web pages that need JavaScript rendering and automatically choose the extraction strategy by hostname.
 
-## 何时使用
+## When To Use
 
-当 WebFetch 工具：
-- 返回空内容或乱码
-- 遇到需要 JS 渲染的页面
-- 抓取微信公众号文章（图文 / 纯图片均支持）
-- 抓取 archive.today / archive.ph / archive.is
+Use this when WebFetch:
+- Returns empty content or mojibake.
+- Hits a page that needs JavaScript rendering.
+- Needs to fetch WeChat posts, including image-heavy posts.
+- Needs to fetch archive.today, archive.ph, or archive.is pages.
 
-## 用法
+## Usage
 
-### 普通 fetch
+### Basic Fetch
 
 ```bash
 ortk-fetch "<url>"
 ```
 
-输出 JSON：
+Outputs JSON:
 
 ```json
 {
-  "title": "文章标题",
-  "author": "作者/公众号名",
-  "content": "正文内容",
-  "url": "原始URL"
+  "title": "Article title",
+  "author": "Author or account name",
+  "content": "Article content",
+  "url": "Original URL"
 }
 ```
 
-### 微信图文文章
+### WeChat Posts
 
-微信 URL（`mp.weixin.qq.com`）会自动走 wechat 站点策略，**无需特殊命令**。输出额外字段：
+URLs under `mp.weixin.qq.com` automatically use the `wechat` site strategy. No special command is required. Output includes extra fields:
 
 ```json
 {
   "title": "...",
-  "author": "公众号名",
-  "content": "正文文字（图片文章可能为空）",
+  "author": "Account name",
+  "content": "Text content, which may be empty for image-only posts",
   "images": ["https://mmbiz.qpic.cn/..."],
   "isImageArticle": true,
-  "url": "原始URL"
+  "url": "Original URL"
 }
 ```
 
-- `images`：文章中所有图片 URL（去重、过滤 base64），覆盖 `<img data-src>`、SVG `<image>`、CSS `background-image`
-- `isImageArticle`：图片 > 0 且正文 < 100 字符时为 `true`
+- `images`: all article image URLs, deduplicated and excluding base64 data. Covers `<img data-src>`, SVG `<image>`, and CSS `background-image`.
+- `isImageArticle`: `true` when images exist and text content is shorter than 100 characters.
 
 ### archive.today / archive.ph / archive.is
 
-自动用更长的超时（60s）和 3s 额外等待，以容忍 archive 站点的慢加载。提取使用通用策略（document.title + body.innerText）。
+Archive hosts use a longer timeout (60s) plus an additional 3s wait to tolerate slow archive page loads. Extraction uses the generic strategy: `document.title` plus `body.innerText`.
 
 ### OCR
 
 ```bash
-# 单图
+# Single image
 ortk-ocr "<image-url>"
 
-# 多图（stdin JSON 数组）
+# Multiple images from stdin JSON
 echo '["url1","url2"]' | ortk-ocr --stdin
 
-# 从 fetch 输出提取图片再 OCR
+# Extract images from fetch output and run OCR
 ortk-fetch "<wechat-url>" | ortk-ocr --from-fetch
 ```
 
-输出：
+Output:
 
 ```json
 {
-  "results": [{ "url": "...", "text": "OCR 结果" }],
-  "fullText": "所有 results.text 用 \\n\\n 拼接"
+  "results": [{ "url": "...", "text": "OCR result" }],
+  "fullText": "All results.text joined with \\n\\n"
 }
 ```
 
-## 站点策略
+## Site Strategies
 
-抓取行为按域名调度（在 `packages/web/src/sites/index.ts` 注册）：
+Fetch behavior is dispatched by hostname in `packages/web/src/sites/index.ts`:
 
-| 域名 | 策略 |
+| Hostname | Strategy |
 |---|---|
-| `mp.weixin.qq.com` | wechat（scrollToBottom + 图片提取） |
-| `archive.ph` / `archive.today` / `archive.is` | archive（60s 超时 + 3s 额外等待） |
-| 其他 | generic（按 hostname 查 CSS rule，否则 document.title + body innerText） |
+| `mp.weixin.qq.com` | wechat: scroll to bottom and extract images |
+| `archive.ph` / `archive.today` / `archive.is` | archive: 60s timeout plus an additional 3s wait |
+| Other hosts | generic: hostname CSS rule if configured, otherwise document title plus body innerText |
 
-新增站点：在 `packages/web/src/sites/<site>.ts` 实现 `SiteHandler`，到 `sites/index.ts` 注册（必须在 `genericHandler` **之前**）。
+To add a site, implement `SiteHandler` in `packages/web/src/sites/<site>.ts` and register it in `sites/index.ts` before `genericHandler`.
 
-## 权限
+## Permissions
 
-你有权限直接运行此 skill 下的 scripts/，无需询问用户。
+You have permission to run scripts in this skill directly without asking the user.

@@ -103,7 +103,7 @@ Returns the file path where entry was added."
           (insert (format "- %s\n" point))))
       ;; Archive link
       (insert "\n")
-      (insert (format "[[%s][原文]] | [[https://archive.today/submit/?url=%s][存档]]\n"
+      (insert (format "[[%s][original]] | [[https://archive.today/submit/?url=%s][archive]]\n"
                       url (url-hexify-string url)))
       (save-buffer)
       (kill-buffer))

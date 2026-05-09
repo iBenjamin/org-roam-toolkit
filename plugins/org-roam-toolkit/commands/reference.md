@@ -1,53 +1,53 @@
 ---
-description: 将有价值的文章放到 org-roam reference 中
+description: Save a valuable article or local file as an org-roam reference note
 argument-hint: <url or local-file-path>
 ---
 
-用户认为这篇文章有价值，需要存入 org-roam reference 笔记。
+The user wants to save this article or file as an org-roam reference note.
 
-输入: $ARGUMENTS
+Input: $ARGUMENTS
 
-**AI 标记规范**：见 `atomic-notes` skill 的"AI 生成内容标记"小节。Reference 笔记**始终**标记 AI 生成。
+**AI marking rules**: follow the "AI-Generated Content Marking" section in `atomic-notes`. Reference notes are always marked as AI-generated when created by this command.
 
-判断输入类型：
-- `http://` 或 `https://` 开头 → URL 流程
-- 否则 → 本地文件流程
-
----
-
-## URL 流程
-
-1. 使用 `fetch` skill 获取文章内容（微信文章自动走 wechat 站点策略）
-2. 提取标题，对文章进行知识蒸馏：
-   - 提炼核心概念和关键洞察
-   - 用 org-mode 格式重构（标题层级、代码块、表格等）
-   - 保留关键代码示例和数据
-   - 去除废话和冗余，只留干货
-3. 确定分类标签
-4. 调用 `roam_create_note`：
-   - `title`: 文章原标题（禁止 AI 改写或精炼）
-   - `subdirectory`: `"reference"`
-   - `sourceUrl`: 原始 URL
-   - `tags`: 分类标签 + AI 生成标签
-   - `properties`: 按 `atomic-notes` skill 的 AI 标记规范
-   - `content`: 蒸馏后的 org-mode 内容
-5. 返回笔记路径
+Determine the input type:
+- Starts with `http://` or `https://`: URL workflow.
+- Otherwise: local-file workflow.
 
 ---
 
-## 本地文件流程
+## URL workflow
 
-本地文件没有稳定外部来源，reference 笔记就是唯一持久化副本，**必须全量保留，不蒸馏不删减**。
+1. Use the `fetch` skill to fetch the article. WeChat articles automatically use the WeChat site strategy.
+2. Extract the title and distill the article:
+   - Extract core concepts and key insights.
+   - Restructure into org-mode format with headings, code blocks, tables, and other useful structure.
+   - Preserve important code examples and data.
+   - Remove fluff and redundancy while keeping the substance.
+3. Choose classification tags.
+4. Call `roam_create_note`:
+   - `title`: original article title. Do not rewrite or polish it.
+   - `subdirectory`: `"reference"`.
+   - `sourceUrl`: original URL.
+   - `tags`: classification tags plus AI-generated tag.
+   - `properties`: follow the AI-marking rules in `atomic-notes`.
+   - `content`: distilled org-mode content.
+5. Return the note path.
 
-1. 用 `Read` 工具读取本地文件内容
-2. 提取标题（取文件中的一级标题，没有则用文件名）
-3. 全量转换为 org-mode 格式（markdown → org，不删减任何内容）
-4. 确定分类标签
-5. 调用 `roam_create_note`：
-   - `title`: 文章原标题
-   - `subdirectory`: `"reference"`
-   - `sourceUrl`: 不设置（无外部来源）
-   - `tags`: 分类标签 + AI 生成标签
-   - `properties`: 按 `atomic-notes` skill 的 AI 标记规范，**额外加** `LOCAL_SOURCE: <原始文件路径>`
-   - `content`: 全量 org-mode 内容
-6. 返回笔记路径
+---
+
+## Local-file workflow
+
+Local files do not have a stable external source. The reference note becomes the persistent copy, so preserve the full content. Do not distill or omit content.
+
+1. Use the `Read` tool to read the local file.
+2. Extract a title. Use a top-level heading if present; otherwise use the filename.
+3. Convert the full content to org-mode format. Convert markdown to org and do not remove any content.
+4. Choose classification tags.
+5. Call `roam_create_note`:
+   - `title`: original article/file title.
+   - `subdirectory`: `"reference"`.
+   - `sourceUrl`: unset, because there is no external source.
+   - `tags`: classification tags plus AI-generated tag.
+   - `properties`: follow the AI-marking rules in `atomic-notes`, and add `LOCAL_SOURCE: <original-file-path>`.
+   - `content`: full org-mode content.
+6. Return the note path.

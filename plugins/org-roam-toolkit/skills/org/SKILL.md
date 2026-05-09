@@ -1,9 +1,9 @@
 ---
 name: org
 description: |
-  Org-mode agenda 和 capture 操作，通过 emacsclient 管理日程和快速捕捉。
+  Use when managing org-mode agenda, TODO, capture, schedule, deadline, or archive operations through emacsclient.
 
-  Triggers: agenda, todo, capture, 日程, 待办, 捕捉, task, 任务
+  Triggers: agenda, todo, capture, task, schedule, deadline, archive
 ---
 
 # Org-agenda and Org-capture Skill
@@ -11,17 +11,17 @@ description: |
 This skill provides org-agenda queries and org-capture operations via emacsclient.
 
 **Two modes of operation:**
-1. **Agenda queries** — View today's schedule, weekly agenda, all TODOs
-2. **Capture operations** — Create TODOs, notes, complete tasks, archive
+1. **Agenda queries** - View today's schedule, weekly agenda, all TODOs.
+2. **Capture operations** - Create TODOs, notes, complete tasks, archive.
 
 ## Critical: Don't Use Direct File Tools
 
 **NEVER use Read/Write/Edit tools on org files for capture operations.** Always use this skill instead.
 
 **Why:**
-- Org entries require proper structure (PROPERTIES drawer, timestamps)
-- Direct edits may break org-mode parsing
-- Archive operations need org-archive functionality
+- Org entries require proper structure (PROPERTIES drawer, timestamps).
+- Direct edits may break org-mode parsing.
+- Archive operations need org-archive functionality.
 
 ## Permissions
 
@@ -116,11 +116,11 @@ ortk-emacs-eval --pkg=org-skill "(org-skill-schedule-todo \"Meeting\" \"2025-01-
 
 ```
 ~/Documents/org/
-├── todo.org           # Main agenda file
-│   ├── * Inbox        # Captured TODOs go here
-│   └── * Notes        # Captured notes go here
-└── archive/           # Archived items
-    └── todo.org_archive::
+|-- todo.org           # Main agenda file
+|   |-- * Inbox        # Captured TODOs go here
+|   `-- * Notes        # Captured notes go here
+`-- archive/           # Archived items
+    `-- todo.org_archive::
 ```
 
 ## Workflows

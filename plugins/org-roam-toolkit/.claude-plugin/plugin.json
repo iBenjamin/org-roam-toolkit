@@ -1,6 +1,6 @@
 {
   "name": "org-roam-toolkit",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "description": "End-to-end org-roam workflows for Claude Code: 9 slash commands, 5 skills (atomic-notes, org, org-roam, fetch, dashboard), and the org-roam MCP server. Requires the Homebrew-installed bins (ortk-mcp, ortk-emacs-eval, ortk-fetch, ortk-ocr).",
   "license": "MIT",
   "author": {

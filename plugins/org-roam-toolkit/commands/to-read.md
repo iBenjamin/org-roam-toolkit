@@ -1,17 +1,17 @@
 ---
-description: 将 URL 加入待读列表
+description: Add a URL to the read-later list
 argument-hint: <url>
 ---
 
-用户想稍后阅读这篇文章。
+The user wants to read this article later.
 
 URL: $ARGUMENTS
 
-## 步骤
+## Steps
 
-1. 用 `WebFetch` 抓取页面，提取标题，生成一句话说明（≤ 15 字）
-2. 调用 `roam_add_to_read` MCP tool：
-   - `title`: 文章标题
-   - `url`: `$ARGUMENTS`
-   - `summary`: 一句话说明（如果抓不到内容，可省略 summary）
-3. 确认添加成功，返回 todo.org Inbox 中的位置
+1. Use `WebFetch` to fetch the page, extract the title, and generate a one-sentence summary of 15 words or fewer.
+2. Call the `roam_add_to_read` MCP tool:
+   - `title`: article title.
+   - `url`: `$ARGUMENTS`.
+   - `summary`: one-sentence summary. Omit `summary` if content cannot be fetched.
+3. Confirm the entry was added and return its location under the `todo.org` Inbox.

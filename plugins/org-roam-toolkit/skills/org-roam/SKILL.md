@@ -1,7 +1,7 @@
 ---
 name: org-roam
 description: |
-  Org-mode formatting and org-roam note management via emacsclient. Never use Read/Write/Edit on roam notes directly.
+  Use when working with org-mode formatting or org-roam note management through MCP tools or emacsclient. Never use Read/Write/Edit on roam notes directly.
 
   Triggers: roam note, org-roam, org-mode, .org files, Zettelkasten, backlinks
 ---
@@ -110,29 +110,29 @@ Notes are organized into subdirectories within `org-roam-directory`:
 
 | Directory | Use Case | Examples |
 |-----------|----------|----------|
-| `daily` | Daily logs, journals, fleeting thoughts | 今日计划、随想、会议记录 |
-| `reference` | External sources, articles, docs | Wikipedia 摘要、新闻、API 文档、教程 |
-| `projects` | Project-specific notes | 项目名相关、任务跟踪、进度记录 |
-| `main` | Conceptual knowledge (default) | 技术原理、概念笔记、学习总结 |
-| `read_history` | Reading log (NOT org-roam nodes) | 文章阅读记录，按季度文件组织 |
-| `toolkit` | Tool/resource collection (NOT org-roam nodes) | 库、工具、服务、API 收藏 |
+| `daily` | Daily logs, journals, fleeting thoughts | plans, thoughts, meeting notes |
+| `reference` | External sources, articles, docs | Wikipedia summaries, news, API docs, tutorials |
+| `projects` | Project-specific notes | project notes, task tracking, progress logs |
+| `main` | Conceptual knowledge (default) | technical principles, concept notes, study summaries |
+| `read_history` | Reading log (NOT org-roam nodes) | article reading log organized by quarter |
+| `toolkit` | Tool/resource collection (NOT org-roam nodes) | libraries, tools, services, API bookmarks |
 
 **Classification rules (Claude auto-selects):**
 1. User explicitly requests a category → use that
-2. User says "阅读历史/reading history/加入阅读" → use `org-roam-skill-add-reading-history` (NOT create-note)
-3. User says "工具收藏/toolkit/收藏工具/加入toolkit" → use `org-roam-skill-add-toolkit-resource` (NOT create-note)
+2. User says "reading history", "read log", or "I already read this" -> use `org-roam-skill-add-reading-history` (NOT create-note)
+3. User says "toolkit", "tool collection", or "save this tool" -> use `org-roam-skill-add-toolkit-resource` (NOT create-note)
 4. Content is from external URL → `reference`
-5. User mentions "今天/today/日志/journal" → `daily`
+5. User mentions "today", "journal", "log", or a daily note -> `daily`
 6. User mentions specific project name → `projects`
 7. Default → `main`
 
 **Usage with `:subdirectory` parameter:**
 ```bash
 # Default (main directory)
-ortk-emacs-eval --pkg=org-roam-skill "(org-roam-skill-create-note \"DNS 记录类型\")"
+ortk-emacs-eval --pkg=org-roam-skill "(org-roam-skill-create-note \"DNS Record Types\")"
 
 # Explicit subdirectory
-ortk-emacs-eval --pkg=org-roam-skill "(org-roam-skill-create-note \"项目A进度\" :subdirectory \"projects\")"
+ortk-emacs-eval --pkg=org-roam-skill "(org-roam-skill-create-note \"Project A Progress\" :subdirectory \"projects\")"
 ortk-emacs-eval --pkg=org-roam-skill "(org-roam-skill-create-note \"Wikipedia: Linux\" :subdirectory \"reference\")"
 ```
 
@@ -171,7 +171,7 @@ One line summary
 - Key point 1
 - Key point 2
 
-[[https://example.com/article][原文]] | [[https://archive.today/submit/?url=...][存档]]
+[[https://example.com/article][original]] | [[https://archive.today/submit/?url=...][archive]]
 ```
 
 ### Toolkit Resources (NOT org-roam nodes)

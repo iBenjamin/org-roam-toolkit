@@ -1,76 +1,76 @@
 ---
-description: 分析 reference 笔记，提取原子概念及其 1 级相关概念
-argument-hint: <reference 笔记标题关键词>
+description: Analyze a reference note and extract atomic concepts plus first-degree related concepts
+argument-hint: <reference note title keywords>
 ---
 
-用户要从一篇已有的 reference 笔记中深度提取知识，创建原子笔记网络。
+The user wants to extract deeper knowledge from an existing reference note and create an atomic-note network.
 
-关键词：$ARGUMENTS
+Keywords: $ARGUMENTS
 
-**所有格式 / References / AI 标记 / 织入图谱规范**：见 `atomic-notes` skill。
+**Format, References, AI marking, and graph-linking rules**: follow the `atomic-notes` skill.
 
-## 第一步：定位 Reference 笔记
+## Step 1: Locate the reference note
 
-调用 `roam_search_title` 搜索 reference 笔记：
-- 唯一匹配：继续
-- 多个匹配：列出让用户选择
-- 找不到：提示用户检查标题
+Call `roam_search_title` to search for the reference note:
+- One match: continue.
+- Multiple matches: list them and ask the user to choose.
+- No match: ask the user to check the title keywords.
 
-## 第二步：读取 Reference 内容
+## Step 2: Read the reference content
 
-通过 emacsclient 读取笔记全文：
+Read the full note via emacsclient:
 
 ```bash
 emacsclient -e '(with-temp-buffer (insert-file-contents "<file-path>") (buffer-string))'
 ```
 
-## 第三步：识别原子概念
+## Step 3: Identify atomic concepts
 
-从 reference 内容中识别值得独立成笔记的核心概念：
-- 每个概念必须是独立的知识单元，脱离原文仍有意义
-- 宁少勿多，2-5 个真正有价值的概念
-- 概念粒度：一句话说本质 + 几个要点展开
-- 跳过过于宽泛的概念（"架构"、"设计模式"）
-- 跳过已有笔记（`roam_search_title` 批量查重）
+Identify core concepts that deserve standalone notes:
+- Each concept must be an independent knowledge unit that still makes sense outside the source article.
+- Prefer fewer, higher-value concepts. Usually 2-5 concepts.
+- A concept should be explainable with one essential sentence plus a few supporting points.
+- Skip concepts that are too broad, such as "Architecture" or "Design Patterns".
+- Skip notes that already exist after batch checking with `roam_search_title`.
 
-## 第四步：展开 1 级相关概念
+## Step 4: Expand first-degree related concepts
 
-对每个原子概念，按 `atomic-notes` skill 的"织入图谱原则"识别其 1 级相关概念（每个 2-5 个），批量 `roam_search_title` 查重。
+For each atomic concept, identify 2-5 first-degree related concepts using the "Graph-Linking Rules" criteria in `atomic-notes`, then batch-check duplicates with `roam_search_title`.
 
-## 第五步：创建原子笔记
+## Step 5: Create atomic notes
 
-对每个需要新建的原子概念，`roam_create_note`：
-- `subdirectory: "main"`、`tags`、AI 标记 properties：按 `atomic-notes` skill
-- `content`：按 `atomic-notes` skill 规范，**额外包含**：
-  - 一句话本质定义
-  - 核心要点展开
-  - "相关概念"段落：1 级相关概念用 `[[id:xxx]]` 链接
-  - 关键代码/数据示例
-  - References（WebSearch 权威来源，至少 2-3 条）
+For every missing atomic concept, call `roam_create_note`:
+- `subdirectory: "main"`, `tags`, and AI-marking properties: follow `atomic-notes`.
+- `content`: follow `atomic-notes`, and additionally include:
+  - One-sentence essential definition.
+  - Expanded key points.
+  - A "Related Concepts" section with first-degree related concepts as `[[id:xxx]]` links when IDs are known.
+  - Important code or data examples.
+  - References from authoritative sources found with WebSearch, at least 2-3 sources.
 
-## 第六步：创建 1 级相关概念笔记
+## Step 6: Create first-degree related concept notes
 
-对需要新建的 1 级相关概念，`roam_create_note`：
-- 同上格式规范
-- 但**不递归展开**其相关概念段落
+For every missing first-degree related concept, call `roam_create_note`:
+- Use the same format as above.
+- Do not recursively expand its own related-concepts section.
 
-## 第七步：织入知识图谱
+## Step 7: Link into the knowledge graph
 
-按 `atomic-notes` skill 的"织入图谱原则"：
-1. 每个原子笔记 ↔ 源 reference 笔记（双向）
-2. 原子笔记 ↔ 其 1 级相关概念（双向）
-3. 原子笔记之间有逻辑关联的互相链接
-4. `roam_search_title` / `roam_search_tag` 找已有笔记建立链接
+Follow the "Graph-Linking Rules" section in `atomic-notes`:
+1. Each atomic note <-> source reference note.
+2. Atomic note <-> its first-degree related concepts.
+3. Atomic notes <-> each other when there is a meaningful relationship.
+4. Use `roam_search_title` / `roam_search_tag` to find and link existing related notes.
 
-## 第八步：提交 archive.today
+## Step 8: Submit to archive.today
 
-按 `atomic-notes` skill 的"提交 archive.today"小节，逐条 `browse-url`，间隔 1 秒。
+Follow the "Submit to archive.today" section in `atomic-notes`, opening each archive.today submission page with `browse-url` and waiting one second between URLs.
 
-## 第九步：输出摘要
+## Step 9: Return a summary
 
-- 源 Reference 笔记标题和路径
-- 提取的原子概念列表
-- 新建的原子笔记（标题 + 路径）
-- 新建的 1 级相关概念笔记列表
-- 跳过的已有笔记
-- 建立的链接关系图
+- Source reference note title and path.
+- Extracted atomic concepts.
+- Newly created atomic notes, including title and path.
+- Newly created first-degree related concept notes.
+- Existing notes skipped.
+- Link graph created.

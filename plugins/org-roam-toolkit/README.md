@@ -42,5 +42,5 @@ See the repo root README for the full setup, including dashboard autostart via `
 
 ## Notes on the commands
 
-- The slash commands are **Claude-specific, Chinese-language, and opinionated**: they encode a specific atomic-notes / Zettelkasten workflow with bilingual titles, `:ZH:` drawers, double-layer References, AI-generation marking, and quarterly file conventions for `read_history/` and `toolkit/`. See `skills/atomic-notes/SKILL.md` for the full format spec.
+- The slash commands are **Claude-specific, English-language, and opinionated**: they encode a specific atomic-notes / Zettelkasten workflow with English titles, English tags, double-layer References, AI-generation marking, and quarterly file conventions for `read_history/` and `toolkit/`. See `skills/atomic-notes/SKILL.md` for the full format spec.
 - `/gen-commit-msg` auto-commits AND auto-pushes when invoked. The slash invocation is treated as explicit authorization.
