@@ -1,6 +1,6 @@
 {
   "name": "org-roam-toolkit",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "description": "End-to-end org-roam workflows for Codex: shared skills plus installer-managed MCP setup. Requires the Homebrew-installed bins (ortk-mcp, ortk-emacs-eval, ortk-fetch, ortk-ocr).",
   "license": "MIT",
   "author": {

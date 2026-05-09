@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.5] - 2026-05-09
+
+### Fixed
+- `ortk-agent-install claude` now copies the plugin into `~/.claude/plugins/cache/<marketplace>/<plugin>/local/` and registers it in `installed_plugins.json` and `known_marketplaces.json`, which is what Claude Code actually scans. The previous symlink at `~/.claude/plugins/<name>` was never discovered by Claude Code, so the plugin silently failed to load. The installer also cleans up that legacy symlink, and rolls back every Claude-side write if a later step (or the Codex install) fails.
+
 ## [0.2.4] - 2026-05-09
 
 ### Added
