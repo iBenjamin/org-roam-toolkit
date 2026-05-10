@@ -26,6 +26,7 @@ Cargo.lock.bak
 .specstory/
 .claude/plans/
 docs/superpowers/
+.superpowers/
 
 # Claude Code local-only settings (personal permissions, paths, etc.)
 .claude/settings.local.json

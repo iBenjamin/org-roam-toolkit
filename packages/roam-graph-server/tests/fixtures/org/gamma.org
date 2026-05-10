@@ -1,0 +1,7 @@
+:PROPERTIES:
+:ID:       cccccccc-3333-3333-3333-333333333333
+:END:
+#+TITLE: Gamma
+#+FILETAGS: :ai:
+
+Gamma is a hub: many backlinks, no forward edges.

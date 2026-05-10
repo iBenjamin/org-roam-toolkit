@@ -1,0 +1,8 @@
+:PROPERTIES:
+:ID:       bbbbbbbb-2222-2222-2222-222222222222
+:END:
+#+TITLE: Beta
+#+FILETAGS: :book:
+
+Beta sees [[id:cccccccc-3333-3333-3333-333333333333][Gamma]] and
+links out to https://example.com.

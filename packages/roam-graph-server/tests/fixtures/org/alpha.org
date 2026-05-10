@@ -1,0 +1,12 @@
+:PROPERTIES:
+:ID:       aaaaaaaa-1111-1111-1111-111111111111
+:END:
+#+TITLE: Alpha
+#+FILETAGS: :ai:math:
+
+Alpha references [[id:bbbbbbbb-2222-2222-2222-222222222222][Beta]] and
+[[id:cccccccc-3333-3333-3333-333333333333][Gamma]].
+
+#+begin_src python
+print("hello, alpha")
+#+end_src

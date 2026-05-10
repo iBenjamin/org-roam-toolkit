@@ -38,12 +38,14 @@ class OrgRoamToolkit < Formula
     system "cargo", "install", *std_cargo_args(path: "packages/dashboard-server")
     system "cargo", "install", *std_cargo_args(path: "packages/agent-install")
     system "cargo", "install", *std_cargo_args(path: "mcp-servers/org-roam")
+    system "cargo", "install", *std_cargo_args(path: "packages/roam-graph-server")
 
     # Keep Cargo build artifacts out of libexec; the target directories are
     # large and not needed at runtime.
     rm_r "mcp-servers/org-roam/target"
     rm_r "packages/agent-install/target"
     rm_r "packages/dashboard-server/target"
+    rm_r "packages/roam-graph-server/target"
 
     # --- Stage everything under libexec --------------------------------
     # The bash bin (emacs-eval) resolves elisp/ via $BASH_SOURCE → libexec.
@@ -98,6 +100,10 @@ class OrgRoamToolkit < Formula
 
         ortk-dashboard --port=9876
 
+      To open the org-roam graph viewer (separate from the dashboard):
+
+        ortk-roam-graph --port=9877       # http://127.0.0.1:9877
+
       Runtime prerequisites you must provide yourself:
         - A running Emacs daemon (`emacs --daemon`) with `org-roam` loaded
           and `org-roam-directory` set
@@ -107,8 +113,9 @@ class OrgRoamToolkit < Formula
   end
 
   test do
-    # ortk-dashboard responds to --version (built from cargo, has version baked in)
+    # ortk-dashboard and ortk-roam-graph respond to --version (built from cargo, has version baked in)
     assert_match version.to_s, shell_output("#{bin}/ortk-dashboard --version")
+    assert_match version.to_s, shell_output("#{bin}/ortk-roam-graph --version")
     assert_match "ortk-agent-install", shell_output("#{bin}/ortk-agent-install --help")
     with_env(HOME: testpath) do
       assert_match "/plugin marketplace add",

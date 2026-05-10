@@ -1,0 +1,6 @@
+:PROPERTIES:
+:ID:       dddddddd-4444-4444-4444-444444444444
+:END:
+#+TITLE: Orphan
+
+Disconnected node — no incoming, no outgoing id-links.
